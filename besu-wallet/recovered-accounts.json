@@ -1,0 +1,32 @@
+[
+  {
+    "name": "producer",
+    "address": "0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54",
+    "privateKey": "0xeffef1d65ed1a44b5415326af7aeb8dc1d8550ed2c62883525f24aa24593ee91",
+    "mnemonic": "armed output earth tip noble opera swarm midnight myself bean promote corn"
+  },
+  {
+    "name": "transporter",
+    "address": "0xe83f7EA2eB8D5049d9162B1F2cfc9075a1C698D0",
+    "privateKey": "0x0890183f1bb79b9e8e79980e66931f270dc4f3e57060dd40cc74d58ee33af97c",
+    "mnemonic": "drastic sure vote edge naive drum basic resemble year slab reason fault"
+  },
+  {
+    "name": "distributor",
+    "address": "0xBe85127318076116cf4C19c5Dd91C95503368FFe",
+    "privateKey": "0x854c614563aa24568989ee68acd599f6c4df87ea5ac5244d5d39daaad061c3ae",
+    "mnemonic": "man sword cargo gate either hard payment leaf tragic swamp tide knife"
+  },
+  {
+    "name": "retailer",
+    "address": "0xB85a94BB5D2F97D1CD517b7ec6208b869C4b2444",
+    "privateKey": "0x5315274d43c9a1517530196024603f7c2f952210a57482a37eec2877a839d294",
+    "mnemonic": "daughter radar help lens surface game away trap good weapon school carpet"
+  },
+  {
+    "name": "customer",
+    "address": "0xAAfD5D06eAB12321852413ffE3A06233C33e8a66",
+    "privateKey": "0xb619bb2b6ab20c07620ee8dca2d493ac335e974e1644960470168f8d4a2d33d4",
+    "mnemonic": "borrow short ramp truck napkin either pair ill today social video manual"
+  }
+]
