@@ -73,8 +73,12 @@ contract SupplyChainTracking is AccessControl {
     event TransferConfirmed(bytes32 indexed itemId, address indexed confirmer); // Thông báo khi một giao dịch chuyển giao được xác nhận
     event ItemStateUpdated(bytes32 indexed itemId, State newState, string note); // Thông báo khi trạng thái mặt hàng thay đổi
     event CertificateAdded(bytes32 indexed itemId, string certName, string certIssuer); // Thông báo khi chứng chỉ được thêm vào
+    event ItemSoldToCustomer(bytes32 indexed itemId, address indexed retailer, address indexed customer); // Thông báo khi mặt hàng được bán cho khách hàng
 
-    // Constructor: Hàm được gọi duy nhất một lần khi triển khai hợp đồng
+    /**
+     * @dev Khởi tạo hợp đồng và cấp vai trò admin mặc định cho người triển khai.
+     * Chỉ người triển khai hợp đồng mới có vai trò DEFAULT_ADMIN_ROLE ban đầu.
+     */
     constructor() {
         // Cấp vai trò mặc định DEFAULT_ADMIN_ROLE cho người triển khai hợp đồng (msg.sender)
         // Vai trò admin có quyền cấp/thu hồi các vai trò khác
@@ -83,7 +87,8 @@ contract SupplyChainTracking is AccessControl {
 
     /**
      * @dev Hàm để admin cấp vai trò cho các địa chỉ cụ thể.
-     * @param role Vai trò cần cấp (PRODUCER_ROLE, TRANSPORTER_ROLE, ...)
+     * Chỉ người có vai trò DEFAULT_ADMIN_ROLE mới có thể gọi hàm này.
+     * @param role Vai trò cần cấp (PRODUCER_ROLE, TRANSPORTER_ROLE, DISTRIBUTOR_ROLE, RETAILER_ROLE, v.v.).
      * @param account Địa chỉ ví của người được cấp vai trò.
      */
     function grantAccess(bytes32 role, address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -91,7 +96,8 @@ contract SupplyChainTracking is AccessControl {
     }
 
     /**
-     * @dev Hàm để admin thu hồi vai trò.
+     * @dev Hàm để admin thu hồi vai trò từ một địa chỉ cụ thể.
+     * Chỉ người có vai trò DEFAULT_ADMIN_ROLE mới có thể gọi hàm này.
      * @param role Vai trò cần thu hồi.
      * @param account Địa chỉ ví của người bị thu hồi vai trò.
      */
@@ -101,8 +107,15 @@ contract SupplyChainTracking is AccessControl {
 
     // ----------- Chức năng quản lý mặt hàng -----------
 
-    // Hàm tạo mặt hàng mới
-    // Chỉ có người có vai trò PRODUCER_ROLE mới được gọi hàm này (sử dụng modifier onlyRole)
+    /**
+     * @dev Producer tạo ra một sản phẩm mới và đăng ký vào chuỗi cung ứng.
+     * Chỉ người có vai trò PRODUCER_ROLE mới có thể gọi hàm này.
+     * Khởi tạo mặt hàng với trạng thái Produced và chủ sở hữu là người tạo.
+     * @param _itemId ID duy nhất cho sản phẩm (do Producer cung cấp).
+     * @param _name Tên sản phẩm.
+     * @param _description Mô tả sản phẩm.
+     * @param _plannedDeliveryTime Thời gian giao hàng dự kiến (timestamp) được đặt bởi Producer.
+     */
     function createItem(bytes32 _itemId, string memory _name, string memory _description, uint256 _plannedDeliveryTime) external onlyRole(PRODUCER_ROLE) {
         // Yêu cầu: Mặt hàng với ID này chưa tồn tại
         require(!items[_itemId].exists, "Item already exists");
@@ -130,8 +143,15 @@ contract SupplyChainTracking is AccessControl {
         emit ItemCreated(_itemId, _name, msg.sender);
     }
 
-    // Hàm bắt đầu quá trình chuyển giao mặt hàng cho người khác
-    // Bất kỳ ai là chủ sở hữu hiện tại đều có thể gọi hàm này
+    /**
+     * @dev Bắt đầu quá trình chuyển giao quyền sở hữu mặt hàng cho một bên khác trong chuỗi cung ứng.
+     * Chỉ chủ sở hữu hiện tại của mặt hàng mới có thể gọi hàm này.
+     * Người nhận (_to) phải có một trong các vai trò TRANSPORTER_ROLE, DISTRIBUTOR_ROLE, hoặc RETAILER_ROLE.
+     * Khởi tạo một giao dịch đang chờ xác nhận từ người nhận.
+     * Cập nhật trạng thái mặt hàng sang InTransit hoặc InTransitToRetailer.
+     * @param _itemId ID của mặt hàng cần chuyển giao.
+     * @param _to Địa chỉ của người nhận mặt hàng.
+     */
     function initiateTransfer(bytes32 _itemId, address _to) external {
         Item storage item = items[_itemId];
         // Yêu cầu: Mặt hàng phải tồn tại
@@ -173,8 +193,13 @@ contract SupplyChainTracking is AccessControl {
         emit TransferInitiated(_itemId, msg.sender, _to); // Phát ra sự kiện TransferInitiated
     }
 
-    // Hàm xác nhận hoàn tất việc chuyển giao mặt hàng
-    // Chỉ có người nhận trong giao dịch đang chờ xử lý mới có thể gọi hàm này
+    /**
+     * @dev Xác nhận việc nhận mặt hàng trong một giao dịch chuyển giao đang chờ xử lý.
+     * Chỉ người nhận được chỉ định trong giao dịch đang chờ xử lý mới có thể gọi hàm này.
+     * Người gọi hàm phải có vai trò tương ứng với bước tiếp theo trong chuỗi cung ứng (Transporter, Distributor, hoặc Retailer).
+     * Cập nhật chủ sở hữu và trạng thái của mặt hàng sau khi xác nhận.
+     * @param _itemId ID của mặt hàng cần xác nhận.
+     */
     function confirmTransfer(bytes32 _itemId) external {
         PendingTransfer storage transfer = pendingTransfers[_itemId];
         // Yêu cầu: Người gọi hàm phải là người nhận trong giao dịch đang chờ xử lý
@@ -192,7 +217,7 @@ contract SupplyChainTracking is AccessControl {
         // Cập nhật trạng thái dựa trên vai trò của người xác nhận
         // Thêm trường hợp cho Transporter xác nhận
         if (hasRole(TRANSPORTER_ROLE, msg.sender)) {
-            // Nếu Transporter xác nhận, trạng thái vẫn là InTransit
+            // Nếu Transporter xác nhận, trạng thái vẫn là InTransit (hoặc có thể chuyển sang trạng thái vận chuyển tiếp theo nếu có)
             item.currentState = State.InTransit; // Hoặc một trạng thái mới nếu bạn thêm vào Enum
         } else if (hasRole(DISTRIBUTOR_ROLE, msg.sender)) {
             // Nếu Distributor xác nhận, trạng thái là Đã nhận tại Nhà phân phối
@@ -224,8 +249,12 @@ contract SupplyChainTracking is AccessControl {
         emit TransferConfirmed(_itemId, msg.sender);
     }
 
-    // Hàm đánh dấu mặt hàng đã được nhận tại điểm bán lẻ (sau khi trạng thái là Delivered)
-    // Chỉ có người có vai trò RETAILER_ROLE mới được gọi hàm này
+    /**
+     * @dev Đánh dấu mặt hàng đã được nhận thành công tại điểm bán lẻ và sẵn sàng để bán.
+     * Chỉ người có vai trò RETAILER_ROLE và là chủ sở hữu hiện tại của mặt hàng mới có thể gọi hàm này.
+     * Cập nhật trạng thái mặt hàng thành Received.
+     * @param _itemId ID của mặt hàng cần đánh dấu đã nhận.
+     */
     function markAsReceived(bytes32 _itemId) external onlyRole(RETAILER_ROLE) {
         Item storage item = items[_itemId];
         // Yêu cầu: Người gọi hàm phải là chủ sở hữu hiện tại
@@ -247,35 +276,54 @@ contract SupplyChainTracking is AccessControl {
         emit ItemStateUpdated(_itemId, State.Received, "Item received");
     }
 
-    // Hàm đánh dấu mặt hàng đã được bán cho người tiêu dùng cuối
-    // Chỉ có người có vai trò RETAILER_ROLE mới được gọi hàm này
-    function markAsSold(bytes32 _itemId) external onlyRole(RETAILER_ROLE) {
+    /**
+     * @dev Đánh dấu mặt hàng đã được bán cho người tiêu dùng cuối cùng.
+     * Chỉ người có vai trò RETAILER_ROLE và là chủ sở hữu hiện tại của mặt hàng mới có thể gọi hàm này.
+     * Cập nhật trạng thái mặt hàng thành Sold và chuyển quyền sở hữu cho người mua (khách hàng cuối).
+     * @param _itemId ID của mặt hàng cần đánh dấu đã bán.
+     * @param _customerAddress Địa chỉ ví của người mua (người tiêu dùng cuối).
+     */
+    function markAsSold(bytes32 _itemId, address _customerAddress) external onlyRole(RETAILER_ROLE) {
         Item storage item = items[_itemId];
-        // Yêu cầu: Người gọi hàm phải là chủ sở hữu hiện tại
-        require(item.currentOwner == msg.sender, "Only owner can mark sold");
-        // Có thể thêm yêu cầu về trạng thái trước đó, ví dụ: require(item.currentState == State.Received, "Item not in Received state");
 
+        // Yêu cầu: Mặt hàng phải tồn tại
+        require(item.exists, "Item does not exist");
+        // Yêu cầu: Người gọi hàm phải là chủ sở hữu hiện tại (người bán - Retailer)
+        require(item.currentOwner == msg.sender, "Only current owner (Retailer) can mark sold");
+        // Yêu cầu: Địa chỉ người mua không phải là địa chỉ zero
+        require(_customerAddress != address(0), "Customer address cannot be zero");
 
         // Cập nhật trạng thái thành Đã bán (Sold)
         item.currentState = State.Sold;
 
+        // Cập nhật chủ sở hữu hiện tại thành địa chỉ của người mua
+        item.currentOwner = _customerAddress;
+
         // Ghi lại lịch sử
+        // Actor vẫn là người thực hiện hành động (Retailer)
         itemHistories[_itemId].push(History({
             state: State.Sold,
-            actor: msg.sender,
+            actor: msg.sender, // Người gọi hàm (Retailer)
             timestamp: block.timestamp,
-            note: "Item sold"
+            note: "Item sold to customer" // Cập nhật ghi chú
         }));
 
         // Phát ra sự kiện cập nhật trạng thái
         emit ItemStateUpdated(_itemId, State.Sold, "Item sold");
+        // Phát ra sự kiện mới thông báo về việc bán cho khách hàng
+        emit ItemSoldToCustomer(_itemId, msg.sender, _customerAddress);
     }
 
     // ----------- Chức năng xử lý sự cố (Hư hỏng, Thất lạc) -----------
     // Các hàm này sử dụng modifier onlyRole để đảm bảo chỉ người có vai trò phù hợp mới có thể gọi
 
-    // Hàm báo cáo mặt hàng bị hư hỏng bởi Transporter
-    // Chỉ có người có vai trò TRANSPORTER_ROLE mới được gọi
+    /**
+     * @dev Báo cáo mặt hàng bị hư hỏng bởi người vận chuyển (Transporter).
+     * Chỉ người có vai trò TRANSPORTER_ROLE mới có thể gọi hàm này.
+     * Cập nhật trạng thái mặt hàng thành Damaged và ghi lại lý do.
+     * @param _itemId ID của mặt hàng bị hư hỏng.
+     * @param _reason Lý do chi tiết về sự hư hỏng.
+     */
     function reportDamage(bytes32 _itemId, string memory _reason) external onlyRole(TRANSPORTER_ROLE) {
         Item storage item = items[_itemId];
         require(item.exists, "Item does not exist");
@@ -294,8 +342,13 @@ contract SupplyChainTracking is AccessControl {
         emit ItemStateUpdated(_itemId, State.Damaged, _reason); // Phát ra sự kiện
     }
 
-    // Hàm báo cáo mặt hàng bị thất lạc bởi Transporter
-    // Chỉ có người có vai trò TRANSPORTER_ROLE mới được gọi
+    /**
+     * @dev Báo cáo mặt hàng bị thất lạc bởi người vận chuyển (Transporter).
+     * Chỉ người có vai trò TRANSPORTER_ROLE mới có thể gọi hàm này.
+     * Cập nhật trạng thái mặt hàng thành Lost và ghi lại lý do.
+     * @param _itemId ID của mặt hàng bị thất lạc.
+     * @param _reason Lý do chi tiết về sự thất lạc.
+     */
     function reportLost(bytes32 _itemId, string memory _reason) external onlyRole(TRANSPORTER_ROLE) {
         Item storage item = items[_itemId];
         require(item.exists, "Item does not exist");
@@ -314,8 +367,13 @@ contract SupplyChainTracking is AccessControl {
         emit ItemStateUpdated(_itemId, State.Lost, _reason); // Phát ra sự kiện
     }
 
-    // Hàm báo cáo mặt hàng bị hư hỏng tại Nhà phân phối
-    // Chỉ có người có vai trò DISTRIBUTOR_ROLE mới được gọi
+    /**
+     * @dev Báo cáo mặt hàng bị hư hỏng tại điểm Nhà phân phối (Distributor).
+     * Chỉ người có vai trò DISTRIBUTOR_ROLE mới có thể gọi hàm này.
+     * Cập nhật trạng thái mặt hàng thành Damaged và ghi lại lý do.
+     * @param _itemId ID của mặt hàng bị hư hỏng.
+     * @param _reason Lý do chi tiết về sự hư hỏng.
+     */
     function reportDamageAtDistributor(bytes32 _itemId, string memory _reason) external onlyRole(DISTRIBUTOR_ROLE) {
         Item storage item = items[_itemId];
         require(item.exists, "Item does not exist");
@@ -334,8 +392,13 @@ contract SupplyChainTracking is AccessControl {
         emit ItemStateUpdated(_itemId, State.Damaged, _reason); // Phát ra sự kiện
     }
 
-    // Hàm báo cáo mặt hàng bị thất lạc tại Nhà phân phối
-    // Chỉ có người có vai trò DISTRIBUTOR_ROLE mới được gọi
+    /**
+     * @dev Báo cáo mặt hàng bị thất lạc tại điểm Nhà phân phối (Distributor).
+     * Chỉ người có vai trò DISTRIBUTOR_ROLE mới có thể gọi hàm này.
+     * Cập nhật trạng thái mặt hàng thành Lost và ghi lại lý do.
+     * @param _itemId ID của mặt hàng bị thất lạc.
+     * @param _reason Lý do chi tiết về sự thất lạc.
+     */
     function reportLostAtDistributor(bytes32 _itemId, string memory _reason) external onlyRole(DISTRIBUTOR_ROLE) {
         Item storage item = items[_itemId];
         require(item.exists, "Item does not exist");
@@ -356,8 +419,14 @@ contract SupplyChainTracking is AccessControl {
 
     // ----------- Chức năng quản lý chứng chỉ -----------
 
-    // Hàm thêm chứng chỉ cho mặt hàng
-    // Chỉ có người có vai trò PRODUCER_ROLE mới được gọi hàm này
+    /**
+     * @dev Thêm một chứng chỉ (ví dụ: chứng nhận hữu cơ) vào hồ sơ của một mặt hàng cụ thể.
+     * Chỉ người có vai trò PRODUCER_ROLE mới có thể gọi hàm này.
+     * Chứng chỉ được liên kết với ID mặt hàng và bao gồm tên, đơn vị cấp và ngày cấp.
+     * @param _itemId ID của mặt hàng cần thêm chứng chỉ.
+     * @param _certName Tên của chứng chỉ (ví dụ: "Organic Certified").
+     * @param _certIssuer Đơn vị hoặc tổ chức đã cấp chứng chỉ.
+     */
     function addCertificate(bytes32 _itemId, string memory _certName, string memory _certIssuer) external onlyRole(PRODUCER_ROLE) {
         Item storage item = items[_itemId];
         require(item.exists, "Item does not exist");
@@ -373,21 +442,62 @@ contract SupplyChainTracking is AccessControl {
         emit CertificateAdded(_itemId, _certName, _certIssuer); // Phát ra sự kiện
     }
 
-    // Hàm xem danh sách chứng chỉ của mặt hàng
-    // Là hàm view, không tốn gas khi gọi
+    /**
+     * @dev Lấy danh sách tất cả các chứng chỉ đã được thêm cho một mặt hàng.
+     * Đây là hàm chỉ đọc (view), không tốn gas khi gọi.
+     * Bất kỳ ai cũng có thể gọi hàm này để kiểm tra chứng chỉ của sản phẩm.
+     * @param _itemId ID của mặt hàng cần xem chứng chỉ.
+     * @return Một mảng các cấu trúc Certificate chứa thông tin về các chứng chỉ của mặt hàng đó.
+     */
     function getCertificates(bytes32 _itemId) external view returns (Certificate[] memory) {
         return itemCertificates[_itemId];
     }
 
     // ----------- Chức năng xem dữ liệu -----------
 
-    // Hàm xem lịch sử trạng thái của mặt hàng
-    // Là hàm view, không tốn gas khi gọi
-    function getItemHistory(bytes32 _itemId) external view returns (History[] memory) {
-        return itemHistories[_itemId];
+    /**
+     * @dev Lấy thông tin chi tiết của một mặt hàng cụ thể.
+     * Đây là hàm chỉ đọc (view), không tốn gas khi gọi.
+     * Bất kỳ ai cũng có thể gọi hàm này để xem thông tin sản phẩm.
+     * @param _itemId ID của mặt hàng cần xem thông tin.
+     * @return Một cấu trúc Item chứa thông tin chi tiết về mặt hàng đó.
+     */
+    function getItemDetail(bytes32 _itemId) external view returns (Item memory) {
+        return items[_itemId]; // Trả về thông tin mặt hàng theo ID
     }
 
-    // Hàm lấy thông tin chi tiết của mặt hàng
-    // Là hàm view, không tốn gas khi gọi. Mapping public items tự động tạo hàm getter này.
-    // function items(bytes32 _itemId) external view returns (Item memory) { ... }
+
+    /**
+     * @dev Lấy địa chỉ chủ sở hữu hiện tại của một mặt hàng cụ thể.
+     * Đây là hàm chỉ đọc (view), không tốn gas khi gọi.
+     * Bất kỳ ai cũng có thể gọi hàm này để kiểm tra chủ sở hữu sản phẩm.
+     * @param _itemId ID của mặt hàng cần xem chủ sở hữu.
+     * @return Địa chỉ của chủ sở hữu hiện tại của mặt hàng.
+     */
+    function getItemOwner(bytes32 _itemId) external view returns (address) {
+        return items[_itemId].currentOwner; // Trả về chủ sở hữu hiện tại của mặt hàng theo ID
+    }
+
+
+    /**
+     * @dev Lấy trạng thái hiện tại của một mặt hàng cụ thể.
+     * Đây là hàm chỉ đọc (view), không tốn gas khi gọi.
+     * Bất kỳ ai cũng có thể gọi hàm này để theo dõi trạng thái sản phẩm.
+     * @param _itemId ID của mặt hàng cần xem trạng thái.
+     * @return Trạng thái hiện tại của mặt hàng (được định nghĩa trong enum State).
+     */
+    function getItemState(bytes32 _itemId) external view returns (State) {
+        return items[_itemId].currentState; // Trả về trạng thái hiện tại của mặt hàng theo ID
+    }
+
+    /**
+     * @dev Lấy toàn bộ lịch sử thay đổi trạng thái của một mặt hàng cụ thể.
+     * Đây là hàm chỉ đọc (view), không tốn gas khi gọi.
+     * Bất kỳ ai cũng có thể gọi hàm này để theo dõi hành trình của sản phẩm.
+     * @param _itemId ID của mặt hàng cần xem lịch sử.
+     * @return Một mảng các cấu trúc History, mỗi phần tử ghi lại một sự kiện thay đổi trạng thái.
+     */
+    function getItemHistory(bytes32 _itemId) external view returns (History[] memory) {
+        return itemHistories[_itemId]; // Trả về lịch sử mặt hàng theo ID
+    }
 }
