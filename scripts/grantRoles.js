@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 
 async function main() {
-  // Địa chỉ contract đã được deploy
+  // Địa chỉ contract đã được deploy (PHẢI LÀ ĐỊA CHỈ CỦA PROXY CONTRACT)
   const deployedContractAddress = "0x2b5a5176cB45Bb6caB6FbC1a17C9ADD2eA09f4C3";
 
   const accounts = {
@@ -14,13 +14,24 @@ async function main() {
 
   console.log(`Attaching to SupplyChainTracking contract at ${deployedContractAddress}...`);
 
-  // Lấy đối tượng contract đã deploy (không cần deploy lại)
+  // Lấy đối tượng contract đã deploy bằng cách attach vào địa chỉ PROXY
+  // Hardhat Upgrades plugin cho phép bạn làm điều này
   const SupplyChainTracking = await hre.ethers.getContractFactory("SupplyChainTracking");
-  const supplyChain = SupplyChainTracking.attach(deployedContractAddress);
+  const supplyChain = SupplyChainTracking.attach(deployedContractAddress); // Attach vào địa chỉ Proxy
 
   // Lấy signer mặc định (tài khoản deployer, có quyền admin)
+  // Đảm bảo tài khoản này có DEFAULT_ADMIN_ROLE trên hợp đồng Proxy
   const [deployer] = await hre.ethers.getSigners();
   console.log(`Using admin account: ${deployer.address}`);
+  // Kiểm tra xem deployer có phải là admin không (tùy chọn)
+  const defaultAdminRole = await supplyChain.DEFAULT_ADMIN_ROLE();
+  if (!(await supplyChain.hasRole(defaultAdminRole, deployer.address))) {
+      console.error("Error: Deployer account does not have DEFAULT_ADMIN_ROLE on the proxy contract.");
+      console.error("Please ensure the account used for deployment has this role or run initialize correctly.");
+      process.exitCode = 1;
+      return;
+  }
+
 
   // Lấy định danh (bytes32) của các vai trò từ contract
   console.log("Fetching role identifiers...");

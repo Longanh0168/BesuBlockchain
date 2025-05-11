@@ -1,8 +1,9 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const { upgrades } = require("hardhat");
 
 // Mô tả bộ kiểm thử cho hợp đồng SupplyChainTracking
-describe("SupplyChainTracking", function () {
+describe("SupplyChainTracking (Upgradeable)", function () {
     let contract; // Biến lưu trữ instance của hợp đồng đã triển khai
     // Các biến lưu trữ signer (tài khoản) cho các vai trò khác nhau
     // Thêm biến 'customer' cho bài test markAsSold mới
@@ -22,7 +23,8 @@ describe("SupplyChainTracking", function () {
         // Lấy Factory của hợp đồng SupplyChainTracking để triển khai
         const SupplyChainTracking = await ethers.getContractFactory("SupplyChainTracking");
         // Triển khai hợp đồng. Người triển khai (admin) sẽ tự động nhận DEFAULT_ADMIN_ROLE.
-        contract = await SupplyChainTracking.deploy();
+        contract = await upgrades.deployProxy(SupplyChainTracking, [], { initializer: 'initialize', kind: 'uups' });
+        await contract.waitForDeployment();
 
         // Thiết lập vai trò cho các tài khoản sử dụng hàm grantAccess (từ AccessControl)
         // Chỉ admin (người có DEFAULT_ADMIN_ROLE) mới có thể cấp vai trò

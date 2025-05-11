@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/access/AccessControl.sol"; // Import thư viện AccessControl của OpenZeppelin để quản lý vai trò
+// Sử dụng các phiên bản upgradeable từ OpenZeppelin    
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 
-// Hợp đồng quản lý chuỗi cung ứng phiên bản 2
-// Kế thừa AccessControl để sử dụng hệ thống vai trò phân quyền
-contract SupplyChainTracking is AccessControl {
+// Hợp đồng quản lý chuỗi cung ứng phiên bản có thể nâng cấp
+// Kế thừa AccessControlUpgradeable và UUPSUpgradeable
+// Sử dụng ContextUpgradeable vì AccessControlUpgradeable cần nó
+contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UUPSUpgradeable {
     // Định nghĩa các vai trò tham gia vào chuỗi cung ứng
     // bytes32 là kiểu dữ liệu được sử dụng cho vai trò trong AccessControl
     bytes32 public constant PRODUCER_ROLE = keccak256("PRODUCER_ROLE"); // Vai trò Nhà sản xuất
@@ -75,16 +79,25 @@ contract SupplyChainTracking is AccessControl {
     event CertificateAdded(bytes32 indexed itemId, string certName, string certIssuer); // Thông báo khi chứng chỉ được thêm vào
     event ItemSoldToCustomer(bytes32 indexed itemId, address indexed retailer, address indexed customer); // Thông báo khi mặt hàng được bán cho khách hàng
 
-    /**
-     * @dev Khởi tạo hợp đồng và cấp vai trò admin mặc định cho người triển khai.
-     * Chỉ người triển khai hợp đồng mới có vai trò DEFAULT_ADMIN_ROLE ban đầu.
-     */
-    constructor() {
-        // Cấp vai trò mặc định DEFAULT_ADMIN_ROLE cho người triển khai hợp đồng (msg.sender)
-        // Vai trò admin có quyền cấp/thu hồi các vai trò khác
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    // Hàm này chỉ được gọi MỘT LẦN duy nhất khi proxy contract được deploy lần đầu.
+    function initialize() initializer public {
+        // Gọi hàm initialize của các hợp đồng cha (AccessControlUpgradeable)
+        // DEFAULT_ADMIN_ROLE cũng cần được khởi tạo
+        __AccessControl_init();
+        __UUPSUpgradeable_init(); // Khởi tạo UUPSUpgradeable
+
+        // Cấp vai trò mặc định DEFAULT_ADMIN_ROLE cho người gọi hàm initialize (thường là người triển khai proxy)
+        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
 
+    /**
+     * @dev Hàm này được yêu cầu bởi UUPSUpgradeable để xác định ai được phép nâng cấp.
+     * Chúng ta sẽ giới hạn quyền này cho người có vai trò DEFAULT_ADMIN_ROLE.
+     * @param newImplementation Địa chỉ của phiên bản implementation mới.
+     */
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+
+    // ----------- Chức năng quản lý quyền truy cập -----------
     /**
      * @dev Hàm để admin cấp vai trò cho các địa chỉ cụ thể.
      * Chỉ người có vai trò DEFAULT_ADMIN_ROLE mới có thể gọi hàm này.
@@ -125,7 +138,7 @@ contract SupplyChainTracking is AccessControl {
             id: _itemId,
             name: _name,
             description: _description,
-            currentOwner: msg.sender, // Chủ sở hữu ban đầu là người tạo (Producer)
+            currentOwner: _msgSender(), // Chủ sở hữu ban đầu là người tạo (Producer)
             currentState: State.Produced, // Trạng thái ban đầu là Đã sản xuất
             exists: true,
             plannedDeliveryTime: _plannedDeliveryTime // Thời gian giao hàng dự kiến
@@ -134,13 +147,13 @@ contract SupplyChainTracking is AccessControl {
         // Ghi lại lịch sử trạng thái ban đầu
         itemHistories[_itemId].push(History({
             state: State.Produced,
-            actor: msg.sender,
+            actor: _msgSender(),
             timestamp: block.timestamp,
             note: "Item created"
         }));
 
         // Phát ra sự kiện ItemCreated
-        emit ItemCreated(_itemId, _name, msg.sender);
+        emit ItemCreated(_itemId, _name, _msgSender());
     }
 
     /**
@@ -157,7 +170,7 @@ contract SupplyChainTracking is AccessControl {
         // Yêu cầu: Mặt hàng phải tồn tại
         require(item.exists, "Item does not exist");
         // Yêu cầu: Người gọi hàm phải là chủ sở hữu hiện tại của mặt hàng
-        require(item.currentOwner == msg.sender, "Only current owner can initiate transfer");
+        require(item.currentOwner == _msgSender(), "Only current owner can initiate transfer");
 
         // Thêm kiểm tra vai trò của người nhận (_to)
         // Người nhận phải là Transporter, Distributor hoặc Retailer
@@ -167,7 +180,7 @@ contract SupplyChainTracking is AccessControl {
 
         // Lưu thông tin về giao dịch chuyển giao đang chờ xử lý
         pendingTransfers[_itemId] = PendingTransfer({
-            from: msg.sender, // Người gửi là chủ sở hữu hiện tại
+            from: _msgSender(), // Người gửi là chủ sở hữu hiện tại
             to: _to, // Người nhận
             fromConfirmed: true, // Người gửi tự động xác nhận khi bắt đầu
             toConfirmed: false // Người nhận chưa xác nhận
@@ -185,12 +198,12 @@ contract SupplyChainTracking is AccessControl {
 
         itemHistories[_itemId].push(History({
             state: item.currentState, // Sử dụng trạng thái vừa được thiết lập
-            actor: msg.sender,
+            actor: _msgSender(),
             timestamp: block.timestamp,
             note: "Transfer initiated"
         }));
 
-        emit TransferInitiated(_itemId, msg.sender, _to); // Phát ra sự kiện TransferInitiated
+        emit TransferInitiated(_itemId, _msgSender(), _to); // Phát ra sự kiện TransferInitiated
     }
 
     /**
@@ -203,7 +216,7 @@ contract SupplyChainTracking is AccessControl {
     function confirmTransfer(bytes32 _itemId) external {
         PendingTransfer storage transfer = pendingTransfers[_itemId];
         // Yêu cầu: Người gọi hàm phải là người nhận trong giao dịch đang chờ xử lý
-        require(transfer.to == msg.sender, "Only receiver can confirm transfer");
+        require(transfer.to == _msgSender(), "Only receiver can confirm transfer");
         // Yêu cầu: Người gửi đã bắt đầu giao dịch trước đó
         require(transfer.fromConfirmed, "Sender must initiate transfer first");
 
@@ -212,17 +225,17 @@ contract SupplyChainTracking is AccessControl {
 
         Item storage item = items[_itemId];
         // Cập nhật chủ sở hữu hiện tại của mặt hàng thành người xác nhận
-        item.currentOwner = transfer.to; // transfer.to == msg.sender ở đây
+        item.currentOwner = transfer.to; // transfer.to == _msgSender() ở đây
 
         // Cập nhật trạng thái dựa trên vai trò của người xác nhận
         // Thêm trường hợp cho Transporter xác nhận
-        if (hasRole(TRANSPORTER_ROLE, msg.sender)) {
+        if (hasRole(TRANSPORTER_ROLE, _msgSender())) {
             // Nếu Transporter xác nhận, trạng thái vẫn là InTransit (hoặc có thể chuyển sang trạng thái vận chuyển tiếp theo nếu có)
             item.currentState = State.InTransit; // Hoặc một trạng thái mới nếu bạn thêm vào Enum
-        } else if (hasRole(DISTRIBUTOR_ROLE, msg.sender)) {
+        } else if (hasRole(DISTRIBUTOR_ROLE, _msgSender())) {
             // Nếu Distributor xác nhận, trạng thái là Đã nhận tại Nhà phân phối
             item.currentState = State.ReceivedAtDistributor;
-        } else if (hasRole(RETAILER_ROLE, msg.sender)) {
+        } else if (hasRole(RETAILER_ROLE, _msgSender())) {
             // Nếu Retailer xác nhận, trạng thái là Đã giao hàng
             item.currentState = State.Delivered;
         } else {
@@ -237,7 +250,7 @@ contract SupplyChainTracking is AccessControl {
 
         itemHistories[_itemId].push(History({
             state: item.currentState, // Sử dụng trạng thái vừa thiết lập
-            actor: msg.sender,
+            actor: _msgSender(),
             timestamp: block.timestamp,
             note: note
         }));
@@ -246,7 +259,7 @@ contract SupplyChainTracking is AccessControl {
         delete pendingTransfers[_itemId];
 
         // Phát ra sự kiện TransferConfirmed
-        emit TransferConfirmed(_itemId, msg.sender);
+        emit TransferConfirmed(_itemId, _msgSender());
     }
 
     /**
@@ -258,7 +271,7 @@ contract SupplyChainTracking is AccessControl {
     function markAsReceived(bytes32 _itemId) external onlyRole(RETAILER_ROLE) {
         Item storage item = items[_itemId];
         // Yêu cầu: Người gọi hàm phải là chủ sở hữu hiện tại
-        require(item.currentOwner == msg.sender, "Only owner can mark received");
+        require(item.currentOwner == _msgSender(), "Only owner can mark received");
         // Có thể thêm yêu cầu về trạng thái trước đó, ví dụ: require(item.currentState == State.Delivered, "Item not in Delivered state");
 
         // Cập nhật trạng thái thành Đã nhận (Received)
@@ -267,7 +280,7 @@ contract SupplyChainTracking is AccessControl {
         // Ghi lại lịch sử
         itemHistories[_itemId].push(History({
             state: State.Received,
-            actor: msg.sender,
+            actor: _msgSender(),
             timestamp: block.timestamp,
             note: "Item received"
         }));
@@ -289,7 +302,7 @@ contract SupplyChainTracking is AccessControl {
         // Yêu cầu: Mặt hàng phải tồn tại
         require(item.exists, "Item does not exist");
         // Yêu cầu: Người gọi hàm phải là chủ sở hữu hiện tại (người bán - Retailer)
-        require(item.currentOwner == msg.sender, "Only current owner (Retailer) can mark sold");
+        require(item.currentOwner == _msgSender(), "Only current owner (Retailer) can mark sold");
         // Yêu cầu: Địa chỉ người mua không phải là địa chỉ zero
         require(_customerAddress != address(0), "Customer address cannot be zero");
 
@@ -303,7 +316,7 @@ contract SupplyChainTracking is AccessControl {
         // Actor vẫn là người thực hiện hành động (Retailer)
         itemHistories[_itemId].push(History({
             state: State.Sold,
-            actor: msg.sender, // Người gọi hàm (Retailer)
+            actor: _msgSender(), // Người gọi hàm (Retailer)
             timestamp: block.timestamp,
             note: "Item sold to customer" // Cập nhật ghi chú
         }));
@@ -311,7 +324,7 @@ contract SupplyChainTracking is AccessControl {
         // Phát ra sự kiện cập nhật trạng thái
         emit ItemStateUpdated(_itemId, State.Sold, "Item sold");
         // Phát ra sự kiện mới thông báo về việc bán cho khách hàng
-        emit ItemSoldToCustomer(_itemId, msg.sender, _customerAddress);
+        emit ItemSoldToCustomer(_itemId, _msgSender(), _customerAddress);
     }
 
     // ----------- Chức năng xử lý sự cố (Hư hỏng, Thất lạc) -----------
@@ -334,7 +347,7 @@ contract SupplyChainTracking is AccessControl {
         // Ghi lại lịch sử sự cố
         itemHistories[_itemId].push(History({
             state: State.Damaged,
-            actor: msg.sender,
+            actor: _msgSender(),
             timestamp: block.timestamp,
             note: _reason
         }));
@@ -359,7 +372,7 @@ contract SupplyChainTracking is AccessControl {
         // Ghi lại lịch sử sự cố
         itemHistories[_itemId].push(History({
             state: State.Lost,
-            actor: msg.sender,
+            actor: _msgSender(),
             timestamp: block.timestamp,
             note: _reason
         }));
@@ -384,7 +397,7 @@ contract SupplyChainTracking is AccessControl {
         // Ghi lại lịch sử sự cố
         itemHistories[_itemId].push(History({
             state: State.Damaged,
-            actor: msg.sender,
+            actor: _msgSender(),
             timestamp: block.timestamp,
             note: _reason
         }));
@@ -409,7 +422,7 @@ contract SupplyChainTracking is AccessControl {
         // Ghi lại lịch sử sự cố
         itemHistories[_itemId].push(History({
             state: State.Lost,
-            actor: msg.sender,
+            actor: _msgSender(),
             timestamp: block.timestamp,
             note: _reason
         }));
