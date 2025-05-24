@@ -63,13 +63,16 @@ docker run --rm --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/c
 --Xp2p-tls-crl-support-enabled=false `
 
 // khởi tạo node 1
-docker run --rm --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8545:8545 hyperledger/besu:latest `
+docker run --rm --name node1 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8545:8545 hyperledger/besu:latest `
   --data-path=/config/Node-1/data `
   --genesis-file=/config/genesis.json `
   --rpc-http-enabled `
   --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
   --host-allowlist="*" `
   --rpc-http-cors-origins="all" `
+  --metrics-enabled `
+  --metrics-port=9545 `
+  --metrics-host=0.0.0.0 `
   --profile=ENTERPRISE // chỉ dùng được ở bản Besu latest (25.2.2)
 
   --Xp2p-tls-enabled=true `
@@ -82,10 +85,10 @@ docker run --rm --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/c
 
 
 // khởi tạo node 2
-docker run --rm --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8547:8546 hyperledger/besu:latest `
+docker run --rm --name node2 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8547:8546 hyperledger/besu:latest `
   --data-path=/config/Node-2/data `
   --genesis-file=/config/genesis.json `
-  --bootnodes=enode://6ddc3f109f84ef9a818f28b6b08c2811bb2d4fe4d0f116b3acae3dae3a0c26c3e35eeef06810ee6bfaf8a424857e5e8231dc1c9fc883b33ce3a9f54d32018332@172.18.0.2:30303 `
+  --bootnodes=enode://cc9d960ca4b4fcd1e9de2709cd9a0bc03fbc79eab436cb689514fef551592759cfb46642b8a0fac5010e2acd1b3878983e29add1ae5cca63cbbe3f2676c3ca34@172.18.0.2:30303 `
   --p2p-port=30304 `
   --rpc-http-enabled `
   --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
@@ -93,6 +96,9 @@ docker run --rm --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/c
   --host-allowlist="*" `
   --rpc-http-cors-origins="all" `
   --rpc-http-port=8546 `
+  --metrics-enabled `
+  --metrics-port=9546 `
+  --metrics-host=0.0.0.0 `
   --profile=ENTERPRISE
 
   --Xp2p-tls-enabled=true `
@@ -104,16 +110,19 @@ docker run --rm --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/c
   --Xp2p-tls-truststore-password-file="/tls/common/common_truststore_password.txt"
 
 // khởi tạo node 3
-docker run --rm --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8548:8547 hyperledger/besu:latest `
+docker run --rm --name node3 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8548:8547 hyperledger/besu:latest `
   --data-path=/config/Node-3/data `
   --genesis-file=/config/genesis.json `
-  --bootnodes=enode://6ddc3f109f84ef9a818f28b6b08c2811bb2d4fe4d0f116b3acae3dae3a0c26c3e35eeef06810ee6bfaf8a424857e5e8231dc1c9fc883b33ce3a9f54d32018332@172.18.0.2:30303 `
+  --bootnodes=enode://cc9d960ca4b4fcd1e9de2709cd9a0bc03fbc79eab436cb689514fef551592759cfb46642b8a0fac5010e2acd1b3878983e29add1ae5cca63cbbe3f2676c3ca34@172.18.0.2:30303 `
   --p2p-port=30305 `
   --rpc-http-enabled `
   --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
   --host-allowlist="*" `
   --rpc-http-cors-origins="all" `
   --rpc-http-port=8547 `
+  --metrics-enabled `
+  --metrics-port=9547 `
+  --metrics-host=0.0.0.0 `
   --profile=ENTERPRISE
 
   --Xp2p-tls-enabled=true `
@@ -125,16 +134,19 @@ docker run --rm --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/c
   --Xp2p-tls-truststore-password-file="/tls/common/common_truststore_password.txt"
 
 // khởi tạo node 4
-docker run --rm --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8549:8548 hyperledger/besu:latest `
+docker run --rm --name node4 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8549:8548 hyperledger/besu:latest `
   --data-path=/config/Node-4/data `
   --genesis-file=/config/genesis.json `
-  --bootnodes=enode://6ddc3f109f84ef9a818f28b6b08c2811bb2d4fe4d0f116b3acae3dae3a0c26c3e35eeef06810ee6bfaf8a424857e5e8231dc1c9fc883b33ce3a9f54d32018332@172.18.0.2:30303 `
+  --bootnodes=enode://cc9d960ca4b4fcd1e9de2709cd9a0bc03fbc79eab436cb689514fef551592759cfb46642b8a0fac5010e2acd1b3878983e29add1ae5cca63cbbe3f2676c3ca34@172.18.0.2:30303 `
   --p2p-port=30306 `
   --rpc-http-enabled `
   --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
   --host-allowlist="*" `
   --rpc-http-cors-origins="all" `
   --rpc-http-port=8548 `
+  --metrics-enabled `
+  --metrics-port=9548 `
+  --metrics-host=0.0.0.0 `
   --profile=ENTERPRISE
 
   
@@ -370,9 +382,10 @@ Invoke-RestMethod -Uri http://localhost:8545 -Method POST -Body $body -ContentTy
 npx hardhat compile
 
 // deploy contract
-PS D:\Besu-Private\IBFT-Network> npx hardhat run scripts/deploySupplyChain.js --network besu_local
-Deploying SupplyChainTracking contract...
-SupplyChainTracking deployed successfully to address: 0xC4F6aD30A6537E64613B166523c72291a2a29824
+PS D:\Besu-Private\IBFT-Network> npx hardhat run scripts/deploySupplyChain.js --network besu_local                      
+Deploying upgradeable SupplyChainTracking contract...
+Proxy contract deployed successfully to address: 0x2b5a5176cB45Bb6caB6FbC1a17C9ADD2eA09f4C3
+Note: This is the PROXY address. Interact with this address.
 
 
 // gán quyền cho các tài khoản
@@ -402,7 +415,7 @@ Granting roles...
 $body = @{
     jsonrpc = "2.0"
     method = "eth_getCode"
-    params = @("0xC4F6aD30A6537E64613B166523c72291a2a29824", "latest")
+    params = @("0x2b5a5176cB45Bb6caB6FbC1a17C9ADD2eA09f4C3", "latest")
     id = 1
 } | ConvertTo-Json -Depth 3
 
@@ -424,6 +437,57 @@ npx hardhat test --network besu_local
 Remove-Item -Recurse -Force artifacts,cache
 
 npx hardhat run scripts/interactSupplyChain.js --network besu_local
+
+
+tích hợp trình phân tích bảo mật Slither vào quy trình CI/CD của bạn, bạn có thể thực hiện các bước sau:
+
+slither . 
+
+Chạy Slither trên thư mục hiện tại chứa mã nguồn hợp đồng thông minh slither sẽ tự động phát hiện
+các vấn đề bảo mật trong mã nguồn hợp đồng thông minh của bạn và cung cấp báo cáo chi tiết về các vấn đề đã
+phát hiện.
+
+
+// 3.5. Giám sát và kiểm soát an toàn hệ thống
+1. Chạy container Prometheus
+Công dụng chính: Khởi động container Prometheus để thu thập dữ liệu (metrics) hiệu suất và hoạt động từ các Besu node.
+chạy cổng : localhost:9090
+
+docker run --rm --name prometheus --network besu-network-ibft-2 `
+  -p 9090:9090 `
+  -v D:\Besu-Private\IBFT-Network\Monitoring\prometheus\prometheus.yml:/etc/prometheus/prometheus.yml `
+  -v D:\Besu-Private\IBFT-Network\Monitoring\prometheus\data:/prometheus `
+  prom/prometheus
+
+docker run --rm --name prometheus --network besu-network-ibft-2 ` # Chạy container, tự xóa khi dừng, đặt tên "prometheus", kết nối vào mạng "besu-network-ibft-2"
+  -p 9090:9090 `                                                 # Ánh xạ port 9090 (UI Prometheus) từ container ra máy host
+  -v D:\Besu-Private\IBFT-Network\Monitoring\prometheus\prometheus.yml:/etc/prometheus/prometheus.yml ` # Mount file cấu hình Prometheus từ host vào container
+  -v D:\Besu-Private\IBFT-Network\Monitoring\prometheus\data:/prometheus ` # Mount thư mục lưu trữ dữ liệu của Prometheus từ host vào container (lưu ý: data sẽ mất nếu container bị xóa do --rm)
+  prom/prometheus  
+
+2. Chạy container Grafana
+Công dụng chính: Khởi động container Grafana để hiển thị dữ liệu metrics đã thu thập bởi Prometheus thông qua dashboard.
+chạy cổng: localhost:3000
+
+docker run --rm --name grafana --network besu-network-ibft-2 `
+  -p 3000:3000 `
+  -v D:\Besu-Private\IBFT-Network\Monitoring\grafana\data:/var/lib/grafana `
+  grafana/grafana
+
+docker run --rm --name grafana --network besu-network-ibft-2 ` # Chạy container, tự xóa khi dừng, đặt tên "grafana", kết nối vào mạng "besu-network-ibft-2"
+  -p 3000:3000 `                                               # Ánh xạ port 3000 (UI Grafana) từ container ra máy host
+  -v D:\Besu-Private\IBFT-Network\Monitoring\grafana\data:/var/lib/grafana ` # Mount thư mục lưu trữ dữ liệu/cấu hình của Grafana từ host vào container (lưu ý: data sẽ mất nếu container bị xóa do --rm)
+  grafana/grafana                                              # Image Docker của Grafana
+
+Thông tin đăng nhập Grafana:
+Username mặc định: admin
+Password mặc định (lần đầu): admin
+Password sau khi đổi: Longanh2402
+Công dụng: Dùng để đăng nhập vào giao diện web của Grafana tại http://localhost:3000 để cấu hình nguồn dữ liệu (Prometheus) và import dashboard.
+
+
+
+
 
 
 // Chương 3 thêm cơ chế bảo mật

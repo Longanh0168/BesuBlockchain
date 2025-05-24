@@ -1,0 +1,18 @@
+global:
+  scrape_interval: 15s # Thu thập dữ liệu mỗi 15 giây
+  evaluation_interval: 15s # Đánh giá rules mỗi 15 giây
+
+scrape_configs:
+  - job_name: 'besu'
+    # discovery:
+    #   docker_sd_configs:
+    #     - host: unix:///var/run/docker.sock
+    # relabel_configs:
+    #   - source_labels: [__meta_docker_container_name]
+    #     regex: '/(.*)'
+    #     target_label: 'instance'
+    #     replacement: '$1'
+    static_configs:
+      - targets: ['node1:9545', 'node2:9546', 'node3:9547', 'node4:9548'] # Tên container Besu và port metrics
+        labels:
+          group: 'ibft-validators' # Gán nhãn để phân biệt
