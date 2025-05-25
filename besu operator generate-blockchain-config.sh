@@ -62,101 +62,70 @@ docker run --rm --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/c
 --Xp2p-tls-truststore-password-file="/tls/common/common_truststore_password.txt" `
 --Xp2p-tls-crl-support-enabled=false `
 
-// khởi tạo node 1
-docker run --rm --name node1 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8545:8545 hyperledger/besu:latest `
-  --data-path=/config/Node-1/data `
-  --genesis-file=/config/genesis.json `
-  --rpc-http-enabled `
-  --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
-  --host-allowlist="*" `
-  --rpc-http-cors-origins="all" `
-  --metrics-enabled `
-  --metrics-port=9545 `
-  --metrics-host=0.0.0.0 `
-  --profile=ENTERPRISE // chỉ dùng được ở bản Besu latest (25.2.2)
-
-  --Xp2p-tls-enabled=true `
-  --Xp2p-tls-keystore-type=PKCS12 `
-  --Xp2p-tls-keystore-file="/tls/node1/node_keystore.p12" `
-  --Xp2p-tls-keystore-password-file="/tls/node1/node_keystore_password.txt" `
-  --Xp2p-tls-truststore-type=PKCS12 `
-  --Xp2p-tls-truststore-file="/tls/common/common_truststore.p12" `
-  --Xp2p-tls-truststore-password-file="/tls/common/common_truststore_password.txt"
+  // khởi tạo node 1
+  docker run --rm --name node1 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8545:8545 hyperledger/besu:latest `
+    --data-path=/config/Node-1/data `
+    --genesis-file=/config/genesis.json `
+    --rpc-http-enabled `
+    --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
+    --host-allowlist="*" `
+    --rpc-http-cors-origins="all" `
+    --metrics-enabled `
+    --metrics-port=9545 `
+    --metrics-host=0.0.0.0 `
+    --profile=ENTERPRISE
 
 
-// khởi tạo node 2
-docker run --rm --name node2 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8547:8546 hyperledger/besu:latest `
-  --data-path=/config/Node-2/data `
-  --genesis-file=/config/genesis.json `
-  --bootnodes=enode://cc9d960ca4b4fcd1e9de2709cd9a0bc03fbc79eab436cb689514fef551592759cfb46642b8a0fac5010e2acd1b3878983e29add1ae5cca63cbbe3f2676c3ca34@172.18.0.2:30303 `
-  --p2p-port=30304 `
-  --rpc-http-enabled `
-  --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
-  --rpc-http-host=0.0.0.0 `
-  --host-allowlist="*" `
-  --rpc-http-cors-origins="all" `
-  --rpc-http-port=8546 `
-  --metrics-enabled `
-  --metrics-port=9546 `
-  --metrics-host=0.0.0.0 `
-  --profile=ENTERPRISE
+  // khởi tạo node 2
+  docker run --rm --name node2 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8547:8546 hyperledger/besu:latest `
+    --data-path=/config/Node-2/data `
+    --genesis-file=/config/genesis.json `
+    --bootnodes=enode://cc9d960ca4b4fcd1e9de2709cd9a0bc03fbc79eab436cb689514fef551592759cfb46642b8a0fac5010e2acd1b3878983e29add1ae5cca63cbbe3f2676c3ca34@172.18.0.2:30303 `
+    --p2p-port=30304 `
+    --rpc-http-enabled `
+    --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
+    --rpc-http-host=0.0.0.0 `
+    --host-allowlist="*" `
+    --rpc-http-cors-origins="all" `
+    --rpc-http-port=8546 `
+    --metrics-enabled `
+    --metrics-port=9546 `
+    --metrics-host=0.0.0.0 `
+    --profile=ENTERPRISE
 
-  --Xp2p-tls-enabled=true `
-  --Xp2p-tls-keystore-type=PKCS12 `
-  --Xp2p-tls-keystore-file="/tls/node2/node_keystore.p12" `
-  --Xp2p-tls-keystore-password-file="/tls/node2/node_keystore_password.txt" `
-  --Xp2p-tls-truststore-type=PKCS12 `
-  --Xp2p-tls-truststore-file="/tls/common/common_truststore.p12" `
-  --Xp2p-tls-truststore-password-file="/tls/common/common_truststore_password.txt"
 
-// khởi tạo node 3
-docker run --rm --name node3 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8548:8547 hyperledger/besu:latest `
-  --data-path=/config/Node-3/data `
-  --genesis-file=/config/genesis.json `
-  --bootnodes=enode://cc9d960ca4b4fcd1e9de2709cd9a0bc03fbc79eab436cb689514fef551592759cfb46642b8a0fac5010e2acd1b3878983e29add1ae5cca63cbbe3f2676c3ca34@172.18.0.2:30303 `
-  --p2p-port=30305 `
-  --rpc-http-enabled `
-  --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
-  --host-allowlist="*" `
-  --rpc-http-cors-origins="all" `
-  --rpc-http-port=8547 `
-  --metrics-enabled `
-  --metrics-port=9547 `
-  --metrics-host=0.0.0.0 `
-  --profile=ENTERPRISE
+  // khởi tạo node 3
+  docker run --rm --name node3 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8548:8547 hyperledger/besu:latest `
+    --data-path=/config/Node-3/data `
+    --genesis-file=/config/genesis.json `
+    --bootnodes=enode://cc9d960ca4b4fcd1e9de2709cd9a0bc03fbc79eab436cb689514fef551592759cfb46642b8a0fac5010e2acd1b3878983e29add1ae5cca63cbbe3f2676c3ca34@172.18.0.2:30303 `
+    --p2p-port=30305 `
+    --rpc-http-enabled `
+    --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
+    --host-allowlist="*" `
+    --rpc-http-cors-origins="all" `
+    --rpc-http-port=8547 `
+    --metrics-enabled `
+    --metrics-port=9547 `
+    --metrics-host=0.0.0.0 `
+    --profile=ENTERPRISE
 
-  --Xp2p-tls-enabled=true `
-  --Xp2p-tls-keystore-type=PKCS12 `
-  --Xp2p-tls-keystore-file="/tls/node3/node_keystore.p12" `
-  --Xp2p-tls-keystore-password-file="/tls/node3/node_keystore_password.txt" `
-  --Xp2p-tls-truststore-type=PKCS12 `
-  --Xp2p-tls-truststore-file="/tls/common/common_truststore.p12" `
-  --Xp2p-tls-truststore-password-file="/tls/common/common_truststore_password.txt"
 
-// khởi tạo node 4
-docker run --rm --name node4 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8549:8548 hyperledger/besu:latest `
-  --data-path=/config/Node-4/data `
-  --genesis-file=/config/genesis.json `
-  --bootnodes=enode://cc9d960ca4b4fcd1e9de2709cd9a0bc03fbc79eab436cb689514fef551592759cfb46642b8a0fac5010e2acd1b3878983e29add1ae5cca63cbbe3f2676c3ca34@172.18.0.2:30303 `
-  --p2p-port=30306 `
-  --rpc-http-enabled `
-  --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
-  --host-allowlist="*" `
-  --rpc-http-cors-origins="all" `
-  --rpc-http-port=8548 `
-  --metrics-enabled `
-  --metrics-port=9548 `
-  --metrics-host=0.0.0.0 `
-  --profile=ENTERPRISE
-
-  
-  --Xp2p-tls-enabled=true `
-  --Xp2p-tls-keystore-type=PKCS12 `
-  --Xp2p-tls-keystore-file="/tls/node4/node_keystore.p12" `
-  --Xp2p-tls-keystore-password-file="/tls/node4/node_keystore_password.txt" `
-  --Xp2p-tls-truststore-type=PKCS12 `
-  --Xp2p-tls-truststore-file="/tls/common/common_truststore.p12" `
-  --Xp2p-tls-truststore-password-file="/tls/common/common_truststore_password.txt"
+  // khởi tạo node 4
+  docker run --rm --name node4 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8549:8548 hyperledger/besu:latest `
+    --data-path=/config/Node-4/data `
+    --genesis-file=/config/genesis.json `
+    --bootnodes=enode://cc9d960ca4b4fcd1e9de2709cd9a0bc03fbc79eab436cb689514fef551592759cfb46642b8a0fac5010e2acd1b3878983e29add1ae5cca63cbbe3f2676c3ca34@172.18.0.2:30303 `
+    --p2p-port=30306 `
+    --rpc-http-enabled `
+    --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
+    --host-allowlist="*" `
+    --rpc-http-cors-origins="all" `
+    --rpc-http-port=8548 `
+    --metrics-enabled `
+    --metrics-port=9548 `
+    --metrics-host=0.0.0.0 `
+    --profile=ENTERPRISE
 
 
 
@@ -410,6 +379,36 @@ Granting roles...
 
 🎉 Role granting process finished!
 
+
+// deploy token contract
+PS D:\Besu-Private\IBFT-Network> npx hardhat run scripts/deployToken.js --network besu_local
+Compiled 7 Solidity files successfully (evm target: paris).
+Deploying SupplyChainCoin with the account: 0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54
+Account ETH balance: 100000000000000000000000
+SupplyChainCoin (SCC) deployed to: 0x6EaB01832715a8deCdCD4F43442779C9E0a77D62
+Token Owner (minter): 0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54
+
+Minting 1000000.0 SCC to 0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54...
+Minted to 0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54.
+Current SCC balance of 0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54: 1000000.0 SCC
+
+Minting 1000000.0 SCC to 0xe83f7EA2eB8D5049d9162B1F2cfc9075a1C698D0...
+Minted to 0xe83f7EA2eB8D5049d9162B1F2cfc9075a1C698D0.
+Current SCC balance of 0xe83f7EA2eB8D5049d9162B1F2cfc9075a1C698D0: 1000000.0 SCC
+
+Minting 1000000.0 SCC to 0xBe85127318076116cf4C19c5Dd91C95503368FFe...
+Minted to 0xBe85127318076116cf4C19c5Dd91C95503368FFe.
+Current SCC balance of 0xBe85127318076116cf4C19c5Dd91C95503368FFe: 1000000.0 SCC
+
+Minting 1000000.0 SCC to 0xB85a94BB5D2F97D1CD517b7ec6208b869C4b2444...
+Minted to 0xB85a94BB5D2F97D1CD517b7ec6208b869C4b2444.
+Current SCC balance of 0xB85a94BB5D2F97D1CD517b7ec6208b869C4b2444: 1000000.0 SCC
+
+Minting 1000000.0 SCC to 0xAAfD5D06eAB12321852413ffE3A06233C33e8a66...
+Minted to 0xAAfD5D06eAB12321852413ffE3A06233C33e8a66.
+Current SCC balance of 0xAAfD5D06eAB12321852413ffE3A06233C33e8a66: 1000000.0 SCC
+
+🎉 Token deployment and initial minting finished!
 
 // kiểm tra contract có còn trên network không
 $body = @{
