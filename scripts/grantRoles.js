@@ -1,10 +1,23 @@
 const hre = require("hardhat");
+const fs = require("fs");
 
 async function main() {
-  // Địa chỉ contract đã được deploy (PHẢI LÀ ĐỊA CHỈ CỦA PROXY CONTRACT)
-  const deployedContractAddress = "0x2b5a5176cB45Bb6caB6FbC1a17C9ADD2eA09f4C3";
+  // Đọc địa chỉ contract đã được deploy từ file (PHẢI LÀ ĐỊA CHỈ CỦA PROXY CONTRACT)
+    let deployedContractAddress;
+    try {
+        deployedContractAddress = fs.readFileSync("deployedProxyAddress.txt", "utf8").trim();
+        if (!deployedContractAddress) {
+            throw new Error("deployedProxyAddress.txt is empty.");
+        }
+        console.log(`Reading SupplyChainTracking Proxy address from file: ${deployedContractAddress}`);
+    } catch (error) {
+        console.error("Error: deployedProxyAddress.txt not found or empty.");
+        console.error("Please ensure SupplyChainTracking contract is deployed and its proxy address is saved to deployedProxyAddress.txt.");
+        process.exit(1); // Thoát nếu không tìm thấy địa chỉ proxy
+    }
 
   const accounts = {
+    administrator: "0xa586c054754e674141B3E1067dD6163Baae59417",
     producer: "0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54",
     transporter: "0xe83f7EA2eB8D5049d9162B1F2cfc9075a1C698D0",
     distributor: "0xBe85127318076116cf4C19c5Dd91C95503368FFe",
@@ -35,10 +48,12 @@ async function main() {
 
   // Lấy định danh (bytes32) của các vai trò từ contract
   console.log("Fetching role identifiers...");
+  const DEFAULT_ADMIN_ROLE = await supplyChain.DEFAULT_ADMIN_ROLE();
   const PRODUCER_ROLE = await supplyChain.PRODUCER_ROLE();
   const TRANSPORTER_ROLE = await supplyChain.TRANSPORTER_ROLE();
   const DISTRIBUTOR_ROLE = await supplyChain.DISTRIBUTOR_ROLE();
   const RETAILER_ROLE = await supplyChain.RETAILER_ROLE();
+  console.log(` - DEFAULT_ADMIN_ROLE: ${DEFAULT_ADMIN_ROLE}`);
   console.log(` - PRODUCER_ROLE: ${PRODUCER_ROLE}`);
   console.log(` - TRANSPORTER_ROLE: ${TRANSPORTER_ROLE}`);
   console.log(` - DISTRIBUTOR_ROLE: ${DISTRIBUTOR_ROLE}`);
@@ -58,6 +73,7 @@ async function main() {
       }
   }
 
+  await grantRoleIfNotGranted(DEFAULT_ADMIN_ROLE, accounts.administrator, "DEFAULT_ADMIN_ROLE");
   await grantRoleIfNotGranted(PRODUCER_ROLE, accounts.producer, "PRODUCER_ROLE");
   await grantRoleIfNotGranted(TRANSPORTER_ROLE, accounts.transporter, "TRANSPORTER_ROLE");
   await grantRoleIfNotGranted(DISTRIBUTOR_ROLE, accounts.distributor, "DISTRIBUTOR_ROLE");

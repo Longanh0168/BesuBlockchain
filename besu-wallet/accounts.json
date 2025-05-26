@@ -1,4 +1,9 @@
 {
+  "administrator": {
+    "address": "0xa586c054754e674141B3E1067dD6163Baae59417",
+    "privateKey": "0x3142371e076a5444191275ea016964ba21820613e51c65f7af0841f3435dee10",
+    "mnemonic": "lemon mammal window peanut slogan reject mutual program other pyramid mixture stand"
+  },
   "producer": {
     "address": "0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54",
     "privateKey": "0xeffef1d65ed1a44b5415326af7aeb8dc1d8550ed2c62883525f24aa24593ee91",

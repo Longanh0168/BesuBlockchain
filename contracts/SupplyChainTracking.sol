@@ -5,6 +5,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Hợp đồng quản lý chuỗi cung ứng phiên bản có thể nâng cấp
 // Kế thừa AccessControlUpgradeable và UUPSUpgradeable
@@ -12,6 +13,7 @@ import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UUPSUpgradeable {
     // Định nghĩa các vai trò tham gia vào chuỗi cung ứng
     // bytes32 là kiểu dữ liệu được sử dụng cho vai trò trong AccessControl
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE"); // Vai trò Quản trị viên
     bytes32 public constant PRODUCER_ROLE = keccak256("PRODUCER_ROLE"); // Vai trò Nhà sản xuất
     bytes32 public constant TRANSPORTER_ROLE = keccak256("TRANSPORTER_ROLE"); // Vai trò Người vận chuyển
     bytes32 public constant DISTRIBUTOR_ROLE = keccak256("DISTRIBUTOR_ROLE"); // Vai trò Nhà phân phối
@@ -46,6 +48,8 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
         State currentState; // Trạng thái hiện tại của mặt hàng
         bool exists; // Cờ kiểm tra xem mặt hàng có tồn tại không
         uint256 plannedDeliveryTime; // Thời gian giao hàng dự kiến (timestamp)
+        uint256 costPrice; // Giá sản xuất (Producer trả cho feeCollector)
+        uint256 sellingPrice; // Giá bán (Người nhận trả cho chủ sở hữu hiện tại khi chuyển giao)
     }
 
     // Struct định nghĩa cấu trúc dữ liệu cho Lịch sử trạng thái của mặt hàng
@@ -65,6 +69,9 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
         bool toConfirmed; // Cờ xác nhận từ người nhận
     }
 
+    IERC20 public tokenContract;
+    address public feeCollector;
+
     // Mappings để lưu trữ dữ liệu
     mapping(bytes32 => Item) public items; // Lưu trữ thông tin mặt hàng theo ID
     mapping(bytes32 => History[]) public itemHistories; // Lưu trữ lịch sử trạng thái của mặt hàng theo ID
@@ -72,12 +79,16 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
     mapping(bytes32 => PendingTransfer) public pendingTransfers; // Lưu trữ các giao dịch chuyển giao đang chờ xử lý theo ID mặt hàng
 
     // Events để thông báo khi có sự kiện quan trọng xảy ra
-    event ItemCreated(bytes32 indexed itemId, string name, address indexed owner); // Thông báo khi mặt hàng được tạo
+    event ItemCreated(bytes32 indexed itemId, string name, address indexed owner, uint256 costPrice, uint256 sellingPrice); // Thông báo khi mặt hàng được tạo
     event TransferInitiated(bytes32 indexed itemId, address indexed from, address indexed to); // Thông báo khi một giao dịch chuyển giao được bắt đầu
-    event TransferConfirmed(bytes32 indexed itemId, address indexed confirmer); // Thông báo khi một giao dịch chuyển giao được xác nhận
+    event TransferConfirmed(bytes32 indexed itemId, address indexed confirmer, uint256 amountPaidToPreviousOwner); // Thông báo khi một giao dịch chuyển giao được xác nhận
     event ItemStateUpdated(bytes32 indexed itemId, State newState, string note); // Thông báo khi trạng thái mặt hàng thay đổi
     event CertificateAdded(bytes32 indexed itemId, string certName, string certIssuer); // Thông báo khi chứng chỉ được thêm vào
     event ItemSoldToCustomer(bytes32 indexed itemId, address indexed retailer, address indexed customer); // Thông báo khi mặt hàng được bán cho khách hàng
+    event TokenContractAddressSet(address indexed tokenAddress); // Thông báo khi địa chỉ hợp đồng token được thiết lập
+    event FeeCollectorAddressSet(address indexed collectorAddress); // Thông báo khi địa chỉ thu phí được thiết lập
+    event ItemSellingPriceUpdated(bytes32 indexed itemId, uint256 newSellingPrice, address indexed updater); // Thông báo khi giá bán của mặt hàng được cập nhật
+    event PaymentTransferred(bytes32 indexed itemId, address indexed payer, address indexed payee, uint256 amount, string reason); // Thông báo khi thanh toán được thực hiện
 
     // Hàm này chỉ được gọi MỘT LẦN duy nhất khi proxy contract được deploy lần đầu.
     function initialize() initializer public {
@@ -88,6 +99,7 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
 
         // Cấp vai trò mặc định DEFAULT_ADMIN_ROLE cho người gọi hàm initialize (thường là người triển khai proxy)
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        feeCollector = _msgSender();
     }
 
     /**
@@ -96,6 +108,17 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
      * @param newImplementation Địa chỉ của phiên bản implementation mới.
      */
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+
+    /**
+     * @dev Hàm để thiết lập địa chỉ hợp đồng token ERC20.
+     * Chỉ người có vai trò DEFAULT_ADMIN_ROLE mới có thể gọi hàm này.
+     * @param _tokenAddress Địa chỉ của hợp đồng token ERC20.
+     */
+    function setTokenContractAddress(address _tokenAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_tokenAddress != address(0), "Token address cannot be zero");
+        tokenContract = IERC20(_tokenAddress);
+        emit TokenContractAddressSet(_tokenAddress);
+    }
 
     // ----------- Chức năng quản lý quyền truy cập -----------
     /**
@@ -121,30 +144,50 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
     // ----------- Chức năng quản lý mặt hàng -----------
 
     /**
-     * @dev Producer tạo ra một sản phẩm mới và đăng ký vào chuỗi cung ứng.
+     * @dev Tạo một mặt hàng mới trong chuỗi cung ứng.
      * Chỉ người có vai trò PRODUCER_ROLE mới có thể gọi hàm này.
-     * Khởi tạo mặt hàng với trạng thái Produced và chủ sở hữu là người tạo.
-     * @param _itemId ID duy nhất cho sản phẩm (do Producer cung cấp).
-     * @param _name Tên sản phẩm.
-     * @param _description Mô tả sản phẩm.
-     * @param _plannedDeliveryTime Thời gian giao hàng dự kiến (timestamp) được đặt bởi Producer.
+     * Hàm này sẽ yêu cầu Producer thanh toán chi phí sản xuất (costPrice) cho feeCollector.
+     * @param _itemId ID duy nhất của mặt hàng (dùng bytes32 để tiết kiệm gas).
+     * @param _name Tên của mặt hàng.
+     * @param _description Mô tả chi tiết về mặt hàng.
+     * @param _plannedDeliveryTime Thời gian giao hàng dự kiến (timestamp).
+     * @param _costPrice Giá sản xuất (Producer trả cho feeCollector).
+     * @param _sellingPrice Giá bán (Người nhận trả cho chủ sở hữu hiện tại khi chuyển giao).
      */
-    function createItem(bytes32 _itemId, string memory _name, string memory _description, uint256 _plannedDeliveryTime) external onlyRole(PRODUCER_ROLE) {
-        // Yêu cầu: Mặt hàng với ID này chưa tồn tại
+    function createItem(
+        bytes32 _itemId,
+        string memory _name,
+        string memory _description,
+        uint256 _plannedDeliveryTime,
+        uint256 _costPrice,
+        uint256 _sellingPrice
+    ) external onlyRole(PRODUCER_ROLE) {
         require(!items[_itemId].exists, "Item already exists");
+        require(address(tokenContract) != address(0), "Token contract address not set");
+        require(feeCollector != address(0), "Fee collector address not set");
 
-        // Tạo một Item mới và lưu vào mapping items
+        // LOGIC: Thu costPrice từ Producer
+        if (_costPrice > 0) {
+            uint256 allowance = tokenContract.allowance(_msgSender(), address(this));
+            require(allowance >= _costPrice, "Insufficient token allowance for cost price");
+            
+            bool success = tokenContract.transferFrom(_msgSender(), feeCollector, _costPrice);
+            require(success, "Cost price token transfer failed");
+            emit PaymentTransferred(_itemId, _msgSender(), feeCollector, _costPrice, "Item Cost Price");
+        }
+
         items[_itemId] = Item({
             id: _itemId,
             name: _name,
             description: _description,
-            currentOwner: _msgSender(), // Chủ sở hữu ban đầu là người tạo (Producer)
-            currentState: State.Produced, // Trạng thái ban đầu là Đã sản xuất
+            currentOwner: _msgSender(),
+            currentState: State.Produced,
             exists: true,
-            plannedDeliveryTime: _plannedDeliveryTime // Thời gian giao hàng dự kiến
+            plannedDeliveryTime: _plannedDeliveryTime,
+            costPrice: _costPrice,
+            sellingPrice: _sellingPrice
         });
 
-        // Ghi lại lịch sử trạng thái ban đầu
         itemHistories[_itemId].push(History({
             state: State.Produced,
             actor: _msgSender(),
@@ -152,8 +195,22 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
             note: "Item created"
         }));
 
-        // Phát ra sự kiện ItemCreated
-        emit ItemCreated(_itemId, _name, _msgSender());
+        emit ItemCreated(_itemId, _name, _msgSender(), _costPrice, _sellingPrice);
+    }
+
+    /**
+     * @dev Cập nhật giá bán của mặt hàng.
+     * Chỉ người hiện tại sở hữu mặt hàng mới có thể gọi hàm này.
+     * @param _itemId ID của mặt hàng cần cập nhật giá bán.
+     * @param _newSellingPrice Giá bán mới cho mặt hàng.
+     */
+    function updateSellingPrice(bytes32 _itemId, uint256 _newSellingPrice) external {
+        Item storage item = items[_itemId];
+        require(item.exists, "Item does not exist");
+        require(item.currentOwner == _msgSender(), "Only current owner can update selling price");
+        
+        item.sellingPrice = _newSellingPrice;
+        emit ItemSellingPriceUpdated(_itemId, _newSellingPrice, _msgSender());
     }
 
     /**
@@ -177,6 +234,9 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
         if (!(hasRole(TRANSPORTER_ROLE, _to) || hasRole(DISTRIBUTOR_ROLE, _to) || hasRole(RETAILER_ROLE, _to))) {
             revert("Invalid receiver role"); // Hoàn lại nếu vai trò người nhận không hợp lệ
         }
+
+        // Kiểm tra xem có giao dịch chuyển giao nào đang chờ xử lý cho mặt hàng này không
+        require(pendingTransfers[_itemId].from == address(0), "Existing transfer pending for this item");
 
         // Lưu thông tin về giao dịch chuyển giao đang chờ xử lý
         pendingTransfers[_itemId] = PendingTransfer({
@@ -215,17 +275,37 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
      */
     function confirmTransfer(bytes32 _itemId) external {
         PendingTransfer storage transfer = pendingTransfers[_itemId];
+        Item storage item = items[_itemId];
+
+        // Yêu cầu: Mặt hàng phải tồn tại
+        require(item.exists, "Item does not exist");
         // Yêu cầu: Người gọi hàm phải là người nhận trong giao dịch đang chờ xử lý
         require(transfer.to == _msgSender(), "Only receiver can confirm transfer");
         // Yêu cầu: Người gửi đã bắt đầu giao dịch trước đó
         require(transfer.fromConfirmed, "Sender must initiate transfer first");
+        // Yêu cầu: Người nhận chưa xác nhận giao dịch này
+        require(!transfer.toConfirmed, "Transfer already confirmed by receiver");
+
+        uint256 amountPaid = 0; // Biến để lưu số tiền đã thanh toán
+        // LOGIC: Thực hiện thanh toán sellingPrice
+        if (item.sellingPrice > 0) {
+            require(address(tokenContract) != address(0), "Token contract address not set");
+            uint256 allowance = tokenContract.allowance(_msgSender(), address(this));
+            require(allowance >= item.sellingPrice, "Insufficient token allowance for selling price");
+            
+            // Người nhận (_msgSender()) trả tiền cho người gửi (transfer.from)
+            bool success = tokenContract.transferFrom(_msgSender(), transfer.from, item.sellingPrice);
+            require(success, "Selling price token transfer failed");
+            amountPaid = item.sellingPrice;
+            emit PaymentTransferred(_itemId, _msgSender(), transfer.from, item.sellingPrice, "Item Selling Price");
+        }
+
 
         // Đánh dấu người nhận đã xác nhận
         transfer.toConfirmed = true;
 
-        Item storage item = items[_itemId];
         // Cập nhật chủ sở hữu hiện tại của mặt hàng thành người xác nhận
-        item.currentOwner = transfer.to; // transfer.to == _msgSender() ở đây
+        item.currentOwner = _msgSender(); // Cập nhật chủ sở hữu mới
 
         // Cập nhật trạng thái dựa trên vai trò của người xác nhận
         // Thêm trường hợp cho Transporter xác nhận
@@ -259,7 +339,7 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
         delete pendingTransfers[_itemId];
 
         // Phát ra sự kiện TransferConfirmed
-        emit TransferConfirmed(_itemId, _msgSender());
+        emit TransferConfirmed(_itemId, _msgSender(), amountPaid);
     }
 
     /**
@@ -272,7 +352,8 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
         Item storage item = items[_itemId];
         // Yêu cầu: Người gọi hàm phải là chủ sở hữu hiện tại
         require(item.currentOwner == _msgSender(), "Only owner can mark received");
-        // Có thể thêm yêu cầu về trạng thái trước đó, ví dụ: require(item.currentState == State.Delivered, "Item not in Delivered state");
+        // Yêu cầu: Trạng thái hiện tại của mặt hàng phải là Delivered
+        require(item.currentState == State.Delivered, "Item must be in Delivered state to mark as received");
 
         // Cập nhật trạng thái thành Đã nhận (Received)
         item.currentState = State.Received;
@@ -282,11 +363,11 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
             state: State.Received,
             actor: _msgSender(),
             timestamp: block.timestamp,
-            note: "Item received"
+            note: "Item received at retailer"
         }));
 
         // Phát ra sự kiện cập nhật trạng thái
-        emit ItemStateUpdated(_itemId, State.Received, "Item received");
+        emit ItemStateUpdated(_itemId, State.Received, "Item received at retailer");
     }
 
     /**
@@ -305,6 +386,8 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
         require(item.currentOwner == _msgSender(), "Only current owner (Retailer) can mark sold");
         // Yêu cầu: Địa chỉ người mua không phải là địa chỉ zero
         require(_customerAddress != address(0), "Customer address cannot be zero");
+        // Yêu cầu: Trạng thái hiện tại của mặt hàng phải là Received
+        require(item.currentState == State.Received, "Item must be in Received state to mark as sold");
 
         // Cập nhật trạng thái thành Đã bán (Sold)
         item.currentState = State.Sold;

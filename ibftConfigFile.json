@@ -16,6 +16,9 @@
     "mixHash": "0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365",
     "coinbase": "0x0000000000000000000000000000000000000000",
     "alloc": {
+      "a586c054754e674141B3E1067dD6163Baae59417": {
+        "balance": "100000000000000000000000"
+      },
       "8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54": {
         "balance": "100000000000000000000000"
       },
@@ -38,6 +41,11 @@
       "generate": true, 
       "count": 4,
       "devAccounts": [
+        {
+          "name": "administrator",
+          "address": "0xa586c054754e674141B3E1067dD6163Baae59417",
+          "mnemonic": "lemon mammal window peanut slogan reject mutual program other pyramid mixture stand"
+        },
         {
           "name": "producer",
           "address": "0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54",

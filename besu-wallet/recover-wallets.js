@@ -4,6 +4,11 @@ const fs = require('fs');
 // Danh sách các tài khoản với mnemonic
 const accounts = [
     {
+        name: "administrator",
+        address: "0xa586c054754e674141B3E1067dD6163Baae59417",
+        mnemonic: "lemon mammal window peanut slogan reject mutual program other pyramid mixture stand"
+    },
+    {
         name: "producer",
         address: "0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54",
         mnemonic: "armed output earth tip noble opera swarm midnight myself bean promote corn"

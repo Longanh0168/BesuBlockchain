@@ -1,6 +1,13 @@
 const { Wallet } = require('ethers');
 const fs = require('fs');
 
+// Tạo tài khoản cho Administrator
+const adminWallet = Wallet.createRandom();
+console.log("🎉 Tài khoản Administrator được tạo:")
+console.log("Địa chỉ (Admin): ", adminWallet.address);
+console.log("Private Key (Admin): ", adminWallet.privateKey);
+console.log("Mnemonic (Admin): ", adminWallet.mnemonic.phrase);
+
 // Tạo tài khoản cho Nhà sản xuất
 const producerWallet = Wallet.createRandom();
 console.log("🎉 Tài khoản Nhà sản xuất được tạo:");
@@ -38,6 +45,11 @@ console.log("Mnemonic (Customer): ", customerWallet.mnemonic.phrase);
 
 // Lưu thông tin tài khoản vào file JSON
 const accounts = {
+    administrator: {
+        address: adminWallet.address,
+        privateKey: adminWallet.privateKey,
+        mnemonic: adminWallet.mnemonic.phrase,
+    },
     producer: {
         address: producerWallet.address,
         privateKey: producerWallet.privateKey,

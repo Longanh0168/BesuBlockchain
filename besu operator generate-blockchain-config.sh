@@ -1,7 +1,6 @@
 besu operator generate-blockchain-config --config-file=ibftConfigFile.json --to=networkFiles --private-key-file-name=key
 
 docker run --rm -v D:\Besu-Private\IBFT-Network:/config hyperledger/besu:latest operator generate-blockchain-config --config-file=/config/ibftConfigFile.json --to=/config/networkFiles --private-key-file-name=key
-docker run --rm -v D:\Besu-Private\IBFT-Network:/config hyperledger/besu:23.10.1 operator generate-blockchain-config --config-file=/config/ibftConfigFile.json --to=/config/networkFiles --private-key-file-name=key
 
 
 
@@ -80,7 +79,7 @@ docker run --rm --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/c
   docker run --rm --name node2 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8547:8546 hyperledger/besu:latest `
     --data-path=/config/Node-2/data `
     --genesis-file=/config/genesis.json `
-    --bootnodes=enode://cc9d960ca4b4fcd1e9de2709cd9a0bc03fbc79eab436cb689514fef551592759cfb46642b8a0fac5010e2acd1b3878983e29add1ae5cca63cbbe3f2676c3ca34@172.18.0.2:30303 `
+    --bootnodes=enode://c81cdf97b1746d09b251837b737a94f26c7300b13d88be26c803cf4e95ba30630802fe331ae6ebb74d61b40e0981a9b2770e9363d190892d2f4404d9bcf8f567@172.18.0.2:30303 `
     --p2p-port=30304 `
     --rpc-http-enabled `
     --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
@@ -98,7 +97,7 @@ docker run --rm --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/c
   docker run --rm --name node3 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8548:8547 hyperledger/besu:latest `
     --data-path=/config/Node-3/data `
     --genesis-file=/config/genesis.json `
-    --bootnodes=enode://cc9d960ca4b4fcd1e9de2709cd9a0bc03fbc79eab436cb689514fef551592759cfb46642b8a0fac5010e2acd1b3878983e29add1ae5cca63cbbe3f2676c3ca34@172.18.0.2:30303 `
+    --bootnodes=enode://c81cdf97b1746d09b251837b737a94f26c7300b13d88be26c803cf4e95ba30630802fe331ae6ebb74d61b40e0981a9b2770e9363d190892d2f4404d9bcf8f567@172.18.0.2:30303 `
     --p2p-port=30305 `
     --rpc-http-enabled `
     --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
@@ -115,7 +114,7 @@ docker run --rm --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/c
   docker run --rm --name node4 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8549:8548 hyperledger/besu:latest `
     --data-path=/config/Node-4/data `
     --genesis-file=/config/genesis.json `
-    --bootnodes=enode://cc9d960ca4b4fcd1e9de2709cd9a0bc03fbc79eab436cb689514fef551592759cfb46642b8a0fac5010e2acd1b3878983e29add1ae5cca63cbbe3f2676c3ca34@172.18.0.2:30303 `
+    --bootnodes=enode://c81cdf97b1746d09b251837b737a94f26c7300b13d88be26c803cf4e95ba30630802fe331ae6ebb74d61b40e0981a9b2770e9363d190892d2f4404d9bcf8f567@172.18.0.2:30303 `
     --p2p-port=30306 `
     --rpc-http-enabled `
     --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
@@ -342,55 +341,40 @@ Remove-Item -Recurse -Force "D:\Besu-Private\IBFT-Network\Node-4\data"
 $body = @{
   jsonrpc = "2.0"
   method = "eth_getBalance"
-  params = @("0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54", "latest")
+  params = @("0xa586c054754e674141B3E1067dD6163Baae59417", "latest")
   id = 1
 } | ConvertTo-Json -Compress
 Invoke-RestMethod -Uri http://localhost:8545 -Method POST -Body $body -ContentType "application/json"
 
+
+
 // biên dịch contract
 npx hardhat compile
 
-// deploy contract
-PS D:\Besu-Private\IBFT-Network> npx hardhat run scripts/deploySupplyChain.js --network besu_local                      
-Deploying upgradeable SupplyChainTracking contract...
-Proxy contract deployed successfully to address: 0x2b5a5176cB45Bb6caB6FbC1a17C9ADD2eA09f4C3
-Note: This is the PROXY address. Interact with this address.
 
-
-// gán quyền cho các tài khoản
-PS D:\Besu-Private\IBFT-Network> npx hardhat run scripts/grantRoles.js --network besu_local
-Attaching to SupplyChainTracking contract at 0xC4F6aD30A6537E64613B166523c72291a2a29824...
-Using admin account: 0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54
-Fetching role identifiers...
- - PRODUCER_ROLE: 0x8eb467f061ca67f42a2d2ca4a346fc9fb645efc0ba75056ee9f71c3a0ccc10a8
- - TRANSPORTER_ROLE: 0xddaa901e2fe3bda354fe0ede2785152d5c109282a613fe024a056a3e66c41bb3
- - DISTRIBUTOR_ROLE: 0xfbd454f36a7e1a388bd6fc3ab10d434aa4578f811acbbcf33afb1c697486313c
- - RETAILER_ROLE: 0x2a5f906c256a5d799494fcd066e1f6c077689de1cdb65052a1624de4bace99bf
-
-Granting roles...
- -> Granting PRODUCER_ROLE to 0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54...
-    Done.
- -> Granting TRANSPORTER_ROLE to 0xe83f7EA2eB8D5049d9162B1F2cfc9075a1C698D0...
-    Done.
- -> Granting DISTRIBUTOR_ROLE to 0xBe85127318076116cf4C19c5Dd91C95503368FFe...
-    Done.
- -> Granting RETAILER_ROLE to 0xB85a94BB5D2F97D1CD517b7ec6208b869C4b2444...
-    Done.
-
-🎉 Role granting process finished!
-
-
-// deploy token contract
+// Các bước triển khai hợp đồng thông minh Supply Chain lên hệ thống Besu sử dụng Hardhat
+// Bước 1: deploy SupplyChainCoin contract
 PS D:\Besu-Private\IBFT-Network> npx hardhat run scripts/deployToken.js --network besu_local
-Compiled 7 Solidity files successfully (evm target: paris).
-Deploying SupplyChainCoin with the account: 0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54
+
+Kết quả biên dịch:
+Compiled 22 Solidity files successfully (evm target: paris).
+Deploying SupplyChainCoin with the account: 0xa586c054754e674141B3E1067dD6163Baae59417
 Account ETH balance: 100000000000000000000000
-SupplyChainCoin (SCC) deployed to: 0x6EaB01832715a8deCdCD4F43442779C9E0a77D62
-Token Owner (minter): 0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54
+SupplyChainCoin (SCC) deployed to: 0x159901Af979465F6c2741fB65Da5CBeea5f6B4Ae
+Token Owner (minter): 0xa586c054754e674141B3E1067dD6163Baae59417
+Token address saved to deployedTokenAddress.txt
+
+Minting 1000000.0 SCC to 0xa586c054754e674141B3E1067dD6163Baae59417...
+Minted to 0xa586c054754e674141B3E1067dD6163Baae59417.
+Current SCC balance of 0xa586c054754e674141B3E1067dD6163Baae59417: 1000000.0 SCC
 
 Minting 1000000.0 SCC to 0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54...
 Minted to 0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54.
 Current SCC balance of 0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54: 1000000.0 SCC
+
+Minting 1000000.0 SCC to 0xAAfD5D06eAB12321852413ffE3A06233C33e8a66...
+Minted to 0xAAfD5D06eAB12321852413ffE3A06233C33e8a66.
+Current SCC balance of 0xAAfD5D06eAB12321852413ffE3A06233C33e8a66: 1000000.0 SCC
 
 Minting 1000000.0 SCC to 0xe83f7EA2eB8D5049d9162B1F2cfc9075a1C698D0...
 Minted to 0xe83f7EA2eB8D5049d9162B1F2cfc9075a1C698D0.
@@ -404,11 +388,55 @@ Minting 1000000.0 SCC to 0xB85a94BB5D2F97D1CD517b7ec6208b869C4b2444...
 Minted to 0xB85a94BB5D2F97D1CD517b7ec6208b869C4b2444.
 Current SCC balance of 0xB85a94BB5D2F97D1CD517b7ec6208b869C4b2444: 1000000.0 SCC
 
-Minting 1000000.0 SCC to 0xAAfD5D06eAB12321852413ffE3A06233C33e8a66...
-Minted to 0xAAfD5D06eAB12321852413ffE3A06233C33e8a66.
-Current SCC balance of 0xAAfD5D06eAB12321852413ffE3A06233C33e8a66: 1000000.0 SCC
-
 🎉 Token deployment and initial minting finished!
+
+// Bước 2: deploy SupplyChainTracking contract
+PS D:\Besu-Private\IBFT-Network> npx hardhat run scripts/deploySupplyChain.js --network besu_local
+
+Kết quả biên dịch:
+Deploying upgradeable SupplyChainTracking contract...
+Found SupplyChainCoin address: 0x159901Af979465F6c2741fB65Da5CBeea5f6B4Ae
+Proxy contract deployed successfully to address: 0x2a8d9D59f6b645EEe6f62fADF885a6Dc90078F96
+Note: This is the PROXY address. Interact with this address.
+Implementation contract deployed to address: 0x672D429678F7489Eaf87F1a0b2066C08392f557b
+Proxy address saved to deployedProxyAddress.txt
+
+Setting SupplyChainCoin address (0x159901Af979465F6c2741fB65Da5CBeea5f6B4Ae) in SupplyChainTracking contract...
+SupplyChainCoin address set successfully!
+
+Remember to run the grant_roles.js script using the proxy address to set up roles.
+
+🎉 SupplyChainTracking deployment and token linking finished!
+
+
+// Bước 3: gán quyền cho các tài khoản
+PS D:\Besu-Private\IBFT-Network> npx hardhat run scripts/grantRoles.js --network besu_local
+
+Kết quả biên dịch:
+Reading SupplyChainTracking Proxy address from file: 0x2a8d9D59f6b645EEe6f62fADF885a6Dc90078F96
+Attaching to SupplyChainTracking contract at 0x2a8d9D59f6b645EEe6f62fADF885a6Dc90078F96...
+Using admin account: 0xa586c054754e674141B3E1067dD6163Baae59417
+Fetching role identifiers...
+ - DEFAULT_ADMIN_ROLE: 0x0000000000000000000000000000000000000000000000000000000000000000
+ - PRODUCER_ROLE: 0x8eb467f061ca67f42a2d2ca4a346fc9fb645efc0ba75056ee9f71c3a0ccc10a8
+ - TRANSPORTER_ROLE: 0xddaa901e2fe3bda354fe0ede2785152d5c109282a613fe024a056a3e66c41bb3
+ - DISTRIBUTOR_ROLE: 0xfbd454f36a7e1a388bd6fc3ab10d434aa4578f811acbbcf33afb1c697486313c
+ - RETAILER_ROLE: 0x2a5f906c256a5d799494fcd066e1f6c077689de1cdb65052a1624de4bace99bf
+
+Granting roles...
+ -> Account 0xa586c054754e674141B3E1067dD6163Baae59417 already has role DEFAULT_ADMIN_ROLE. Skipping.
+ -> Granting PRODUCER_ROLE to 0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54...
+    Done.
+ -> Granting TRANSPORTER_ROLE to 0xe83f7EA2eB8D5049d9162B1F2cfc9075a1C698D0...
+    Done.
+ -> Granting DISTRIBUTOR_ROLE to 0xBe85127318076116cf4C19c5Dd91C95503368FFe...
+    Done.
+ -> Granting RETAILER_ROLE to 0xB85a94BB5D2F97D1CD517b7ec6208b869C4b2444...
+    Done.
+
+🎉 Role granting process finished!
+
+
 
 // kiểm tra contract có còn trên network không
 $body = @{
