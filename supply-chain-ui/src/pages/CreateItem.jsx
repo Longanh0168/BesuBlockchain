@@ -55,6 +55,7 @@ const CreateItem = () => {
     setLoading(true);
     try {
       const itemIdBytes32 = keccak256(toUtf8Bytes(values.itemId));
+      const originalItemId = values.itemId;
       const deliveryTimestamp = Math.floor(values.plannedDeliveryTime.toDate().getTime() / 1000);
       const cost = ethers.parseUnits(values.costPrice.toString(), 18);
       const sell = ethers.parseUnits(values.sellingPrice.toString(), 18);
@@ -80,7 +81,8 @@ const CreateItem = () => {
         values.description,
         deliveryTimestamp,
         cost,
-        sell
+        sell,
+        originalItemId
       );
       await tx.wait();
 

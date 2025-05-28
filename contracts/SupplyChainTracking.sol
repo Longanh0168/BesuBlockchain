@@ -50,6 +50,7 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
         uint256 plannedDeliveryTime; // Thời gian giao hàng dự kiến (timestamp)
         uint256 costPrice; // Giá sản xuất (Producer trả cho feeCollector)
         uint256 sellingPrice; // Giá bán (Người nhận trả cho chủ sở hữu hiện tại khi chuyển giao)
+        string itemIdString; // <-- THÊM DÒNG NÀY: ID dưới dạng chuỗi để dễ đọc
     }
 
     // Struct định nghĩa cấu trúc dữ liệu cho Lịch sử trạng thái của mặt hàng
@@ -77,6 +78,9 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
     mapping(bytes32 => History[]) public itemHistories; // Lưu trữ lịch sử trạng thái của mặt hàng theo ID
     mapping(bytes32 => Certificate[]) public itemCertificates; // Lưu trữ chứng chỉ của mặt hàng theo ID
     mapping(bytes32 => PendingTransfer) public pendingTransfers; // Lưu trữ các giao dịch chuyển giao đang chờ xử lý theo ID mặt hàng
+
+    // Mảng mới để lưu trữ tất cả các ID mặt hàng đã được tạo
+    bytes32[] private allItemIds; // Sử dụng private để chỉ có thể truy cập qua hàm getter
 
     // Events để thông báo khi có sự kiện quan trọng xảy ra
     event ItemCreated(bytes32 indexed itemId, string name, address indexed owner, uint256 costPrice, uint256 sellingPrice); // Thông báo khi mặt hàng được tạo
@@ -160,7 +164,8 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
         string memory _description,
         uint256 _plannedDeliveryTime,
         uint256 _costPrice,
-        uint256 _sellingPrice
+        uint256 _sellingPrice,
+        string memory _originalItemId
     ) external onlyRole(PRODUCER_ROLE) {
         require(!items[_itemId].exists, "Item already exists");
         require(address(tokenContract) != address(0), "Token contract address not set");
@@ -185,7 +190,8 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
             exists: true,
             plannedDeliveryTime: _plannedDeliveryTime,
             costPrice: _costPrice,
-            sellingPrice: _sellingPrice
+            sellingPrice: _sellingPrice,
+            itemIdString: _originalItemId // <-- GÁN GIÁ TRỊ TẠI ĐÂY
         });
 
         itemHistories[_itemId].push(History({
@@ -194,6 +200,8 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
             timestamp: block.timestamp,
             note: "Item created"
         }));
+
+        allItemIds.push(_itemId); // Thêm ID mặt hàng vào mảng allItemIds
 
         emit ItemCreated(_itemId, _name, _msgSender(), _costPrice, _sellingPrice);
     }
@@ -595,5 +603,14 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
      */
     function getItemHistory(bytes32 _itemId) external view returns (History[] memory) {
         return itemHistories[_itemId]; // Trả về lịch sử mặt hàng theo ID
+    }
+
+    /**
+     * @dev Lấy tất cả các ID mặt hàng đã được tạo.
+     * Hàm này cho phép truy xuất danh sách tất cả các ID mặt hàng đang tồn tại trong hệ thống.
+     * @return Một mảng các bytes32 chứa tất cả các ID mặt hàng.
+     */
+    function getAllItemIds() external view returns (bytes32[] memory) {
+        return allItemIds;
     }
 }

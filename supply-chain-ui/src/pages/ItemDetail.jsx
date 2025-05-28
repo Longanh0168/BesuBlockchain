@@ -46,8 +46,7 @@ const ItemDetail = () => {
   const handleSearch = useCallback(async (values) => {
     // Kiểm tra contract đã sẵn sàng trước khi thực hiện tìm kiếm
     if (!contract) {
-      console.warn("Contract not ready when handleSearch was called.");
-      return;
+      return message.error("Contract chưa sẵn sàng");
     }
 
     setLoading(true);

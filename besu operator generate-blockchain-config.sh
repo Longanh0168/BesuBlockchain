@@ -437,6 +437,17 @@ Granting roles...
 🎉 Role granting process finished!
 
 
+// upgrade SupplyChainTracking contract
+npx hardhat run scripts/upgradeSupplyChain.js --network besu_local
+
+PS D:\Besu-Private\IBFT-Network> npx hardhat run scripts/upgradeSupplyChain.js --network besu_local
+Reading SupplyChainTracking Proxy address from file: 0x2a8d9D59f6b645EEe6f62fADF885a6Dc90078F96
+Đang nâng cấp hợp đồng SupplyChainTracking...
+Địa chỉ Proxy hiện tại: 0x2a8d9D59f6b645EEe6f62fADF885a6Dc90078F96
+Hợp đồng SupplyChainTracking đã được nâng cấp thành công!
+Địa chỉ Proxy (không đổi): 0x2a8d9D59f6b645EEe6f62fADF885a6Dc90078F96
+Địa chỉ Implementation mới: 0xd37bCfe8426Cb4a60d4432B87cf2129AB0fD4f56
+
 
 // kiểm tra contract có còn trên network không
 $body = @{
