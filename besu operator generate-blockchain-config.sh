@@ -79,7 +79,7 @@ docker run --rm --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/c
   docker run --rm --name node2 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8547:8546 hyperledger/besu:latest `
     --data-path=/config/Node-2/data `
     --genesis-file=/config/genesis.json `
-    --bootnodes=enode://c81cdf97b1746d09b251837b737a94f26c7300b13d88be26c803cf4e95ba30630802fe331ae6ebb74d61b40e0981a9b2770e9363d190892d2f4404d9bcf8f567@172.18.0.2:30303 `
+    --bootnodes=enode://26e7c76a4850abe6b2478f20c6cc1cf47f6b48c8b922c6d28e61a206cde4dc2514dce197397d5cb1cc8018d0479fcb7bd38c0d15958821117c26a243aa2993ff@172.18.0.2:30303 `
     --p2p-port=30304 `
     --rpc-http-enabled `
     --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
@@ -97,7 +97,7 @@ docker run --rm --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/c
   docker run --rm --name node3 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8548:8547 hyperledger/besu:latest `
     --data-path=/config/Node-3/data `
     --genesis-file=/config/genesis.json `
-    --bootnodes=enode://c81cdf97b1746d09b251837b737a94f26c7300b13d88be26c803cf4e95ba30630802fe331ae6ebb74d61b40e0981a9b2770e9363d190892d2f4404d9bcf8f567@172.18.0.2:30303 `
+    --bootnodes=enode://26e7c76a4850abe6b2478f20c6cc1cf47f6b48c8b922c6d28e61a206cde4dc2514dce197397d5cb1cc8018d0479fcb7bd38c0d15958821117c26a243aa2993ff@172.18.0.2:30303 `
     --p2p-port=30305 `
     --rpc-http-enabled `
     --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
@@ -114,7 +114,7 @@ docker run --rm --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/c
   docker run --rm --name node4 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8549:8548 hyperledger/besu:latest `
     --data-path=/config/Node-4/data `
     --genesis-file=/config/genesis.json `
-    --bootnodes=enode://c81cdf97b1746d09b251837b737a94f26c7300b13d88be26c803cf4e95ba30630802fe331ae6ebb74d61b40e0981a9b2770e9363d190892d2f4404d9bcf8f567@172.18.0.2:30303 `
+    --bootnodes=enode://26e7c76a4850abe6b2478f20c6cc1cf47f6b48c8b922c6d28e61a206cde4dc2514dce197397d5cb1cc8018d0479fcb7bd38c0d15958821117c26a243aa2993ff@172.18.0.2:30303 `
     --p2p-port=30306 `
     --rpc-http-enabled `
     --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `

@@ -11,25 +11,63 @@ import {
   Empty,
   Button,
   Space,
+  Tag,
 } from 'antd';
+
+// Import hàm tiện ích để lấy tên vai trò từ địa chỉ
+import { getNameByAddress } from '../utils/roles';
 
 const { Title, Text } = Typography;
 
+// Cập nhật StateMap để khớp với enum State mới trong Solidity (viết hoa)
 const StateMap = {
-  0: 'Produced',
-  1: 'InTransit',
-  2: 'ReceivedAtDistributor',
-  3: 'InTransitToRetailer',
-  4: 'Delivered',
-  5: 'Received',
-  6: 'Sold',
-  7: 'Damaged',
-  8: 'Lost',
+  0: 'PRODUCED',
+  1: 'IN_TRANSIT',
+  2: 'IN_TRANSIT_AT_TRANSPORTER',
+  3: 'IN_TRANSIT_TO_DISTRIBUTOR',
+  4: 'RECEIVED_AT_DISTRIBUTOR',
+  5: 'IN_TRANSIT_TO_RETAILER',
+  6: 'RECEIVED_AT_RETAILER',
+  7: 'SOLD',
+  8: 'DAMAGED',
+  9: 'LOST',
+};
+
+const getStateTagColor = (state) => {
+  switch (state) {
+    case 'PRODUCED': return 'blue';
+    case 'IN_TRANSIT': return 'geekblue';
+    case 'IN_TRANSIT_AT_TRANSPORTER': return 'volcano';
+    case 'IN_TRANSIT_TO_DISTRIBUTOR': return 'magenta';
+    case 'RECEIVED_AT_DISTRIBUTOR': return 'purple';
+    case 'IN_TRANSIT_TO_RETAILER': return 'orange';
+    case 'RECEIVED_AT_RETAILER': return 'green';
+    case 'SOLD': return 'success';
+    case 'DAMAGED': return 'red';
+    case 'LOST': return 'gray';
+    default: return 'default';
+  }
+};
+
+const getStateTagName = (state) => {
+  switch (state) {
+    case 'PRODUCED': return 'Sản xuất';
+    case 'IN_TRANSIT': return 'Đang vận chuyển';
+    case 'IN_TRANSIT_AT_TRANSPORTER': return 'Đang vận chuyển (Tại người vận chuyển)';
+    case 'IN_TRANSIT_TO_DISTRIBUTOR': return 'Đang vận chuyển (Tới nhà phân phối)';
+    case 'RECEIVED_AT_DISTRIBUTOR': return 'Đã nhận tại nhà phân phối';
+    case 'IN_TRANSIT_TO_RETAILER': return 'Đang vận chuyển (Tới nhà bán lẻ)';
+    case 'RECEIVED_AT_RETAILER': return 'Đã nhận tại nhà bán lẻ';
+    case 'SOLD': return 'Đã bán';
+    case 'DAMAGED': return 'Bị hư hỏng';
+    case 'LOST': return 'Bị thất lạc';
+    default: return 'default';
+  }
 };
 
 const ListItem = () => {
   const [contract, setContract] = useState(null);
-  const [loading, setLoading] = useState(true); // Bắt đầu với loading true
+  const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
   const navigate = useNavigate();
 
@@ -46,11 +84,11 @@ const ListItem = () => {
       } catch (err) {
         message.error('Không thể kết nối ví: ' + err.message);
         console.error("Lỗi kết nối ví:", err);
-        setLoading(false); // Tắt loading nếu có lỗi kết nối
+        setLoading(false);
       }
     } else {
       message.error('Vui lòng cài đặt MetaMask!');
-      setLoading(false); // Tắt loading nếu không có MetaMask
+      setLoading(false);
     }
   }, []);
 
@@ -69,12 +107,13 @@ const ListItem = () => {
       // Lặp qua từng ID và lấy chi tiết
       for (const idBytes32 of allItemIds) {
         const itemDetail = await contract.getItemDetail(idBytes32);
-        if (itemDetail.exists) { // Chỉ thêm vào nếu mặt hàng thực sự tồn tại
+        if (itemDetail.exists) {
           fetchedItems.push({
-            idBytes32: idBytes32, // Giữ lại hash ID nếu bạn muốn debug hoặc tham chiếu
-            itemId: itemDetail.itemIdString, // <-- THAY THẾ Ở ĐÂY: Lấy ID gốc từ trường mới trong contract
+            idBytes32: idBytes32,
+            itemId: itemDetail.itemIdString,
             name: itemDetail.name,
-            currentOwner: itemDetail.currentOwner,
+            currentOwner: await getNameByAddress(itemDetail.currentOwner),
+            currentOwnerAddress: itemDetail.currentOwner,
             currentState: StateMap[itemDetail.currentState],
             sellingPrice: ethers.formatUnits(itemDetail.sellingPrice, 18),
           });
@@ -131,7 +170,8 @@ const ListItem = () => {
                   description={
                     <Space direction="vertical" size={0}>
                       <Text>Chủ sở hữu: {item.currentOwner}</Text>
-                      <Text>Trạng thái: {item.currentState}</Text>
+                      <Text>Địa chỉ: {item.currentOwnerAddress}</Text>
+                      <Text>Trạng thái: <Tag color={getStateTagColor(item.currentState)}>{getStateTagName(item.currentState)}</Tag></Text>
                       <Text>Giá bán: {item.sellingPrice} SCC</Text>
                     </Space>
                   }

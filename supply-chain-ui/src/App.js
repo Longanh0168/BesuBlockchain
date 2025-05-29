@@ -25,12 +25,15 @@ function App() {
             style={{ flex: 1, minWidth: 0, justifyContent: 'flex-end' }}
           >
             <Menu.Item key="1">
-              <Link to="/list-item">Danh sách mặt hàng</Link>
+              <Link to="/">Trang chủ</Link>
             </Menu.Item>
             <Menu.Item key="2">
-              <Link to="/create-item">Tạo mặt hàng</Link>
+              <Link to="/list-item">Danh sách mặt hàng</Link>
             </Menu.Item>
             <Menu.Item key="3">
+              <Link to="/create-item">Tạo mặt hàng</Link>
+            </Menu.Item>
+            <Menu.Item key="4">
               <Link to="/item-detail">Xem chi tiết mặt hàng</Link>
             </Menu.Item>
             {/* Bạn có thể thêm các mục menu khác tại đây */}

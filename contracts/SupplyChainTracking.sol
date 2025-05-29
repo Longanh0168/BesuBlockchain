@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-// Sử dụng các phiên bản upgradeable từ OpenZeppelin    
+// Sử dụng các phiên bản upgradeable từ OpenZeppelin
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
@@ -21,15 +21,16 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
 
     // Enum định nghĩa các trạng thái có thể có của một mặt hàng trong chuỗi cung ứng
     enum State {
-        Produced, // Đã sản xuất
-        InTransit, // Đang vận chuyển (có thể là tới Transporter hoặc Distributor)
-        ReceivedAtDistributor, // Đã nhận tại Nhà phân phối
-        InTransitToRetailer, // Đang vận chuyển đến Nhà bán lẻ
-        Delivered, // Đã giao hàng (đến Retailer)
-        Received, // Đã nhận hàng (tại Retailer, sẵn sàng bán)
-        Sold, // Đã bán
-        Damaged, // Bị hư hỏng
-        Lost // Bị thất lạc
+        PRODUCED, // Đã sản xuất
+        IN_TRANSIT, // Đang vận chuyển (tới Transporter)
+        IN_TRANSIT_AT_TRANSPORTER, // Đang vận chuyển và thuộc sở hữu của Transporter
+        IN_TRANSIT_TO_DISTRIBUTOR, // Đang vận chuyển (tới Distributor)
+        RECEIVED_AT_DISTRIBUTOR, // Đã nhận tại Nhà phân phối
+        IN_TRANSIT_TO_RETAILER, // Đang vận chuyển đến Nhà bán lẻ
+        RECEIVED_AT_RETAILER, // Đã nhận hàng tại Nhà bán lẻ
+        SOLD, // Đã bán
+        DAMAGED, // Bị hư hỏng
+        LOST // Bị thất lạc
     }
 
     // Struct định nghĩa cấu trúc dữ liệu cho Chứng chỉ của sản phẩm
@@ -50,7 +51,7 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
         uint256 plannedDeliveryTime; // Thời gian giao hàng dự kiến (timestamp)
         uint256 costPrice; // Giá sản xuất (Producer trả cho feeCollector)
         uint256 sellingPrice; // Giá bán (Người nhận trả cho chủ sở hữu hiện tại khi chuyển giao)
-        string itemIdString; // <-- THÊM DÒNG NÀY: ID dưới dạng chuỗi để dễ đọc
+        string itemIdString; // ID dưới dạng chuỗi
     }
 
     // Struct định nghĩa cấu trúc dữ liệu cho Lịch sử trạng thái của mặt hàng
@@ -67,7 +68,7 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
         address from; // Địa chỉ người gửi
         address to; // Địa chỉ người nhận
         bool fromConfirmed; // Cờ xác nhận từ người gửi (luôn là true khi bắt đầu)
-        bool toConfirmed; // Cờ xác nhận từ người nhận
+        bool toConfirmed; // Người nhận chưa xác nhận
     }
 
     IERC20 public tokenContract;
@@ -124,6 +125,17 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
         emit TokenContractAddressSet(_tokenAddress);
     }
 
+    /**
+     * @dev Hàm để thiết lập địa chỉ thu phí (fee collector).
+     * Chỉ người có vai trò DEFAULT_ADMIN_ROLE mới có thể gọi hàm này.
+     * @param _collectorAddress Địa chỉ của người thu phí.
+     */
+    function setFeeCollectorAddress(address _collectorAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_collectorAddress != address(0), "Fee collector address cannot be zero");
+        feeCollector = _collectorAddress;
+        emit FeeCollectorAddressSet(_collectorAddress);
+    }
+
     // ----------- Chức năng quản lý quyền truy cập -----------
     /**
      * @dev Hàm để admin cấp vai trò cho các địa chỉ cụ thể.
@@ -175,7 +187,7 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
         if (_costPrice > 0) {
             uint256 allowance = tokenContract.allowance(_msgSender(), address(this));
             require(allowance >= _costPrice, "Insufficient token allowance for cost price");
-            
+
             bool success = tokenContract.transferFrom(_msgSender(), feeCollector, _costPrice);
             require(success, "Cost price token transfer failed");
             emit PaymentTransferred(_itemId, _msgSender(), feeCollector, _costPrice, "Item Cost Price");
@@ -183,19 +195,19 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
 
         items[_itemId] = Item({
             id: _itemId,
+            itemIdString: _originalItemId,
             name: _name,
             description: _description,
             currentOwner: _msgSender(),
-            currentState: State.Produced,
+            currentState: State.PRODUCED,
             exists: true,
             plannedDeliveryTime: _plannedDeliveryTime,
             costPrice: _costPrice,
-            sellingPrice: _sellingPrice,
-            itemIdString: _originalItemId // <-- GÁN GIÁ TRỊ TẠI ĐÂY
+            sellingPrice: _sellingPrice
         });
 
         itemHistories[_itemId].push(History({
-            state: State.Produced,
+            state: State.PRODUCED,
             actor: _msgSender(),
             timestamp: block.timestamp,
             note: "Item created"
@@ -208,25 +220,118 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
 
     /**
      * @dev Cập nhật giá bán của mặt hàng.
-     * Chỉ người hiện tại sở hữu mặt hàng mới có thể gọi hàm này.
+     * Chỉ người hiện tại sở hữu mặt hàng và có vai trò là PRODUCER_ROLE, DISTRIBUTOR_ROLE, RETAILER_ROLE và mặt hàng ở trạng thái hợp lệ mới có thể gọi hàm này.
      * @param _itemId ID của mặt hàng cần cập nhật giá bán.
      * @param _newSellingPrice Giá bán mới cho mặt hàng.
      */
     function updateSellingPrice(bytes32 _itemId, uint256 _newSellingPrice) external {
         Item storage item = items[_itemId];
+        // Yêu cầu: Mặt hàng phải tồn tại
         require(item.exists, "Item does not exist");
+        // Yêu cầu: Người gọi hàm phải là chủ sở hữu hiện tại của mặt hàng
         require(item.currentOwner == _msgSender(), "Only current owner can update selling price");
-        
+        // Yêu cầu: Người gọi hàm phải có một trong các vai trò PRODUCER_ROLE, DISTRIBUTOR_ROLE, hoặc RETAILER_ROLE
+        require(hasRole(PRODUCER_ROLE, _msgSender()) || hasRole(DISTRIBUTOR_ROLE, _msgSender()) || hasRole(RETAILER_ROLE, _msgSender()), "Caller is not authorized");
+        // Yêu cầu trạng thái của mặt hàng phải PRODUCED, RECEIVED_AT_DISTRIBUTOR, RECEIVED_AT_RETAILER
+        require(item.currentState == State.PRODUCED || item.currentState == State.RECEIVED_AT_DISTRIBUTOR || item.currentState == State.RECEIVED_AT_RETAILER, "Item must be in a valid state to update selling price");
+
+        uint256 oldPrice = item.sellingPrice;
         item.sellingPrice = _newSellingPrice;
         emit ItemSellingPriceUpdated(_itemId, _newSellingPrice, _msgSender());
+
+        // Ghi lại lịch sử thay đổi giá bán
+        itemHistories[_itemId].push(History({
+            state: item.currentState,
+            actor: _msgSender(),
+            timestamp: block.timestamp,
+            note: string(abi.encodePacked("Selling price updated from ", _uintToString(oldPrice), " to ", _uintToString(_newSellingPrice)))
+        }));
     }
 
+    // Thêm hàm chuyển uint256 sang string nếu chưa có
+    function _uintToString(uint256 v) internal pure returns (string memory) {
+        if (v == 0) {
+            return "0";
+        }
+        uint256 j = v;
+        uint256 length;
+        while (j != 0) {
+            length++;
+            j /= 10;
+        }
+        bytes memory bstr = new bytes(length);
+        uint256 k = length;
+        j = v;
+        while (j != 0) {
+            bstr[--k] = bytes1(uint8(48 + j % 10));
+            j /= 10;
+        }
+        return string(bstr);
+    }
+
+    /**
+     * @dev Báo cáo mặt hàng bị hư hỏng.
+     * Chỉ người có vai trò TRANSPORTER_ROLE hoặc DISTRIBUTOR_ROLE và là chủ sở hữu hiện tại mới có thể gọi hàm này.
+     * Cập nhật trạng thái mặt hàng thành Damaged và ghi lại lý do.
+     * @param _itemId ID của mặt hàng bị hư hỏng.
+     * @param _reason Lý do chi tiết về sự hư hỏng.
+     */
+    function reportDamage(bytes32 _itemId, string memory _reason) external {
+        // Yêu cầu: Chỉ người có vai trò TRANSPORTER_ROLE hoặc DISTRIBUTOR_ROLE mới có thể gọi hàm này
+        require(hasRole(TRANSPORTER_ROLE, _msgSender()) || hasRole(DISTRIBUTOR_ROLE, _msgSender()), "Caller must be Transporter or Distributor to report damage");
+        Item storage item = items[_itemId];
+        // Yêu cầu: Mặt hàng phải tồn tại
+        require(item.exists, "Item does not exist");
+        // Yêu cầu: Người gọi hàm phải là chủ sở hữu hiện tại của mặt hàng
+        require(item.currentOwner == _msgSender(), "Only current owner can report damage");
+
+        item.currentState = State.DAMAGED;
+        // Ghi lại lịch sử sự cố
+        itemHistories[_itemId].push(History({
+            state: State.DAMAGED,
+            actor: _msgSender(),
+            timestamp: block.timestamp,
+            note: _reason
+        }));
+
+        emit ItemStateUpdated(_itemId, State.DAMAGED, _reason);
+    }
+
+    /**
+     * @dev Báo cáo mặt hàng bị thất lạc.
+     * Chỉ người có vai trò TRANSPORTER_ROLE hoặc DISTRIBUTOR_ROLE và là chủ sở hữu hiện tại mới có thể gọi hàm này.
+     * Cập nhật trạng thái mặt hàng thành Lost và ghi lại lý do.
+     * @param _itemId ID của mặt hàng bị thất lạc.
+     * @param _reason Lý do chi tiết về sự thất lạc.
+     */
+    function reportLost(bytes32 _itemId, string memory _reason) external {
+        // Yêu cầu: Chỉ người có vai trò TRANSPORTER_ROLE hoặc DISTRIBUTOR_ROLE mới có thể gọi hàm này
+        require(hasRole(TRANSPORTER_ROLE, _msgSender()) || hasRole(DISTRIBUTOR_ROLE, _msgSender()), "Caller must be Transporter or Distributor to report lost");
+        Item storage item = items[_itemId];
+        // Yêu cầu: Mặt hàng phải tồn tại
+        require(item.exists, "Item does not exist");
+        // Yêu cầu: Người gọi hàm phải là chủ sở hữu hiện tại của mặt hàng
+        require(item.currentOwner == _msgSender(), "Only current owner can report lost");
+
+        item.currentState = State.LOST;
+        // Ghi lại lịch sử sự cố
+        itemHistories[_itemId].push(History({
+            state: State.LOST,
+            actor: _msgSender(),
+            timestamp: block.timestamp,
+            note: _reason
+        }));
+
+        emit ItemStateUpdated(_itemId, State.LOST, _reason);
+    }
+
+    // ----------- Chức năng quản lý chuyển giao -----------
     /**
      * @dev Bắt đầu quá trình chuyển giao quyền sở hữu mặt hàng cho một bên khác trong chuỗi cung ứng.
      * Chỉ chủ sở hữu hiện tại của mặt hàng mới có thể gọi hàm này.
      * Người nhận (_to) phải có một trong các vai trò TRANSPORTER_ROLE, DISTRIBUTOR_ROLE, hoặc RETAILER_ROLE.
      * Khởi tạo một giao dịch đang chờ xác nhận từ người nhận.
-     * Cập nhật trạng thái mặt hàng sang InTransit hoặc InTransitToRetailer.
+     * Cập nhật trạng thái mặt hàng sang trạng thái vận chuyển phù hợp.
      * @param _itemId ID của mặt hàng cần chuyển giao.
      * @param _to Địa chỉ của người nhận mặt hàng.
      */
@@ -237,7 +342,6 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
         // Yêu cầu: Người gọi hàm phải là chủ sở hữu hiện tại của mặt hàng
         require(item.currentOwner == _msgSender(), "Only current owner can initiate transfer");
 
-        // Thêm kiểm tra vai trò của người nhận (_to)
         // Người nhận phải là Transporter, Distributor hoặc Retailer
         if (!(hasRole(TRANSPORTER_ROLE, _to) || hasRole(DISTRIBUTOR_ROLE, _to) || hasRole(RETAILER_ROLE, _to))) {
             revert("Invalid receiver role"); // Hoàn lại nếu vai trò người nhận không hợp lệ
@@ -255,23 +359,38 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
         });
 
         // Cập nhật trạng thái của mặt hàng dựa trên vai trò của người nhận
-        if (hasRole(TRANSPORTER_ROLE, _to) || hasRole(DISTRIBUTOR_ROLE, _to)) {
-             // Sử dụng InTransit khi gửi cho Transporter hoặc Distributor
-             item.currentState = State.InTransit;
+        if (hasRole(TRANSPORTER_ROLE, _to)) {
+            item.currentState = State.IN_TRANSIT; // Chuyển cho Transporter
+        } else if (hasRole(DISTRIBUTOR_ROLE, _to)) {
+            item.currentState = State.IN_TRANSIT_TO_DISTRIBUTOR; // Chuyển cho Distributor
         } else if (hasRole(RETAILER_ROLE, _to)) {
-            // Trạng thái khi gửi trực tiếp cho Retailer
-            item.currentState = State.InTransitToRetailer;
+            item.currentState = State.IN_TRANSIT_TO_RETAILER; // Chuyển cho Retailer
         }
-        // Không cần khối else ở đây vì đã kiểm tra vai trò ở trên
 
         itemHistories[_itemId].push(History({
-            state: item.currentState, // Sử dụng trạng thái vừa được thiết lập
+            state: item.currentState,
             actor: _msgSender(),
             timestamp: block.timestamp,
-            note: "Transfer initiated"
+            note: string(abi.encodePacked("Transfer initiated to ", _addressToString(_to)))
         }));
 
         emit TransferInitiated(_itemId, _msgSender(), _to); // Phát ra sự kiện TransferInitiated
+    }
+
+    /**
+     * @dev Hàm trợ giúp để chuyển đổi địa chỉ sang chuỗi (cho mục đích ghi chú lịch sử)
+     */
+    function _addressToString(address _address) internal pure returns (string memory) {
+        bytes32 value = bytes32(uint256(uint160(_address)));
+        bytes memory alphabet = "0123456789abcdef";
+        bytes memory str = new bytes(42);
+        str[0] = '0';
+        str[1] = 'x';
+        for (uint i = 0; i < 20; i++) {
+            str[2+i*2] = alphabet[uint8(value[i+12] >> 4)];
+            str[3+i*2] = alphabet[uint8(value[i+12] & 0x0F)];
+        }
+        return string(str);
     }
 
     /**
@@ -293,6 +412,10 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
         require(transfer.fromConfirmed, "Sender must initiate transfer first");
         // Yêu cầu: Người nhận chưa xác nhận giao dịch này
         require(!transfer.toConfirmed, "Transfer already confirmed by receiver");
+        // Người nhận phải là Transporter, Distributor hoặc Retailer
+        if (!(hasRole(TRANSPORTER_ROLE, _msgSender()) || hasRole(DISTRIBUTOR_ROLE, _msgSender()) || hasRole(RETAILER_ROLE, _msgSender()))) {
+            revert("Invalid confirm transfer role"); // Hoàn lại nếu vai trò người nhận không hợp lệ
+        }
 
         uint256 amountPaid = 0; // Biến để lưu số tiền đã thanh toán
         // LOGIC: Thực hiện thanh toán sellingPrice
@@ -308,36 +431,32 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
             emit PaymentTransferred(_itemId, _msgSender(), transfer.from, item.sellingPrice, "Item Selling Price");
         }
 
-
         // Đánh dấu người nhận đã xác nhận
         transfer.toConfirmed = true;
 
         // Cập nhật chủ sở hữu hiện tại của mặt hàng thành người xác nhận
         item.currentOwner = _msgSender(); // Cập nhật chủ sở hữu mới
 
+        string memory note = "Item received.";
         // Cập nhật trạng thái dựa trên vai trò của người xác nhận
-        // Thêm trường hợp cho Transporter xác nhận
         if (hasRole(TRANSPORTER_ROLE, _msgSender())) {
-            // Nếu Transporter xác nhận, trạng thái vẫn là InTransit (hoặc có thể chuyển sang trạng thái vận chuyển tiếp theo nếu có)
-            item.currentState = State.InTransit; // Hoặc một trạng thái mới nếu bạn thêm vào Enum
+            item.currentState = State.IN_TRANSIT_AT_TRANSPORTER; // Transporter xác nhận và giữ hàng
+            note = "Item received by Transporter for transit.";
         } else if (hasRole(DISTRIBUTOR_ROLE, _msgSender())) {
-            // Nếu Distributor xác nhận, trạng thái là Đã nhận tại Nhà phân phối
-            item.currentState = State.ReceivedAtDistributor;
+            item.currentState = State.RECEIVED_AT_DISTRIBUTOR; // Distributor xác nhận
+            note = "Item received at Distributor.";
         } else if (hasRole(RETAILER_ROLE, _msgSender())) {
-            // Nếu Retailer xác nhận, trạng thái là Đã giao hàng
-            item.currentState = State.Delivered;
-        } else {
-             revert("Confirmer does not have a valid participant role in this transfer step");
+            item.currentState = State.RECEIVED_AT_RETAILER; // Retailer xác nhận
+            note = "Item received at Retailer.";
         }
 
-        string memory note = "Delivered on time";
         // Logic kiểm tra thời gian giao hàng có thể cần điều chỉnh cho phù hợp với từng bước xác nhận
         if (block.timestamp > item.plannedDeliveryTime) {
-            note = "Delivered late!";
+            note = string(abi.encodePacked(note, " (Delivered late!)"));
         }
 
         itemHistories[_itemId].push(History({
-            state: item.currentState, // Sử dụng trạng thái vừa thiết lập
+            state: item.currentState,
             actor: _msgSender(),
             timestamp: block.timestamp,
             note: note
@@ -348,34 +467,6 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
 
         // Phát ra sự kiện TransferConfirmed
         emit TransferConfirmed(_itemId, _msgSender(), amountPaid);
-    }
-
-    /**
-     * @dev Đánh dấu mặt hàng đã được nhận thành công tại điểm bán lẻ và sẵn sàng để bán.
-     * Chỉ người có vai trò RETAILER_ROLE và là chủ sở hữu hiện tại của mặt hàng mới có thể gọi hàm này.
-     * Cập nhật trạng thái mặt hàng thành Received.
-     * @param _itemId ID của mặt hàng cần đánh dấu đã nhận.
-     */
-    function markAsReceived(bytes32 _itemId) external onlyRole(RETAILER_ROLE) {
-        Item storage item = items[_itemId];
-        // Yêu cầu: Người gọi hàm phải là chủ sở hữu hiện tại
-        require(item.currentOwner == _msgSender(), "Only owner can mark received");
-        // Yêu cầu: Trạng thái hiện tại của mặt hàng phải là Delivered
-        require(item.currentState == State.Delivered, "Item must be in Delivered state to mark as received");
-
-        // Cập nhật trạng thái thành Đã nhận (Received)
-        item.currentState = State.Received;
-
-        // Ghi lại lịch sử
-        itemHistories[_itemId].push(History({
-            state: State.Received,
-            actor: _msgSender(),
-            timestamp: block.timestamp,
-            note: "Item received at retailer"
-        }));
-
-        // Phát ra sự kiện cập nhật trạng thái
-        emit ItemStateUpdated(_itemId, State.Received, "Item received at retailer");
     }
 
     /**
@@ -394,11 +485,11 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
         require(item.currentOwner == _msgSender(), "Only current owner (Retailer) can mark sold");
         // Yêu cầu: Địa chỉ người mua không phải là địa chỉ zero
         require(_customerAddress != address(0), "Customer address cannot be zero");
-        // Yêu cầu: Trạng thái hiện tại của mặt hàng phải là Received
-        require(item.currentState == State.Received, "Item must be in Received state to mark as sold");
+        // Yêu cầu: Trạng thái hiện tại của mặt hàng phải là ReceivedAtRetailer
+        require(item.currentState == State.RECEIVED_AT_RETAILER, "Item must be in ReceivedAtRetailer state to mark as sold");
 
-        // Cập nhật trạng thái thành Đã bán (Sold)
-        item.currentState = State.Sold;
+        // Cập nhật trạng thái thành Đã bán (SOLD)
+        item.currentState = State.SOLD;
 
         // Cập nhật chủ sở hữu hiện tại thành địa chỉ của người mua
         item.currentOwner = _customerAddress;
@@ -406,126 +497,21 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
         // Ghi lại lịch sử
         // Actor vẫn là người thực hiện hành động (Retailer)
         itemHistories[_itemId].push(History({
-            state: State.Sold,
-            actor: _msgSender(), // Người gọi hàm (Retailer)
+            state: State.SOLD,
+            actor: _msgSender(),
             timestamp: block.timestamp,
-            note: "Item sold to customer" // Cập nhật ghi chú
+            note: "Item sold to customer"
         }));
 
         // Phát ra sự kiện cập nhật trạng thái
-        emit ItemStateUpdated(_itemId, State.Sold, "Item sold");
+        emit ItemStateUpdated(_itemId, State.SOLD, "Item sold");
         // Phát ra sự kiện mới thông báo về việc bán cho khách hàng
         emit ItemSoldToCustomer(_itemId, _msgSender(), _customerAddress);
     }
 
-    // ----------- Chức năng xử lý sự cố (Hư hỏng, Thất lạc) -----------
-    // Các hàm này sử dụng modifier onlyRole để đảm bảo chỉ người có vai trò phù hợp mới có thể gọi
-
-    /**
-     * @dev Báo cáo mặt hàng bị hư hỏng bởi người vận chuyển (Transporter).
-     * Chỉ người có vai trò TRANSPORTER_ROLE mới có thể gọi hàm này.
-     * Cập nhật trạng thái mặt hàng thành Damaged và ghi lại lý do.
-     * @param _itemId ID của mặt hàng bị hư hỏng.
-     * @param _reason Lý do chi tiết về sự hư hỏng.
-     */
-    function reportDamage(bytes32 _itemId, string memory _reason) external onlyRole(TRANSPORTER_ROLE) {
-        Item storage item = items[_itemId];
-        require(item.exists, "Item does not exist");
-        // Có thể thêm yêu cầu người gọi là chủ sở hữu hiện tại, hoặc đang trong trạng thái vận chuyển
-
-        item.currentState = State.Damaged; // Cập nhật trạng thái thành Hư hỏng
-
-        // Ghi lại lịch sử sự cố
-        itemHistories[_itemId].push(History({
-            state: State.Damaged,
-            actor: _msgSender(),
-            timestamp: block.timestamp,
-            note: _reason
-        }));
-
-        emit ItemStateUpdated(_itemId, State.Damaged, _reason); // Phát ra sự kiện
-    }
-
-    /**
-     * @dev Báo cáo mặt hàng bị thất lạc bởi người vận chuyển (Transporter).
-     * Chỉ người có vai trò TRANSPORTER_ROLE mới có thể gọi hàm này.
-     * Cập nhật trạng thái mặt hàng thành Lost và ghi lại lý do.
-     * @param _itemId ID của mặt hàng bị thất lạc.
-     * @param _reason Lý do chi tiết về sự thất lạc.
-     */
-    function reportLost(bytes32 _itemId, string memory _reason) external onlyRole(TRANSPORTER_ROLE) {
-        Item storage item = items[_itemId];
-        require(item.exists, "Item does not exist");
-        // Có thể thêm yêu cầu người gọi là chủ sở hữu hiện tại, hoặc đang trong trạng thái vận chuyển
-
-        item.currentState = State.Lost; // Cập nhật trạng thái thành Thất lạc
-
-        // Ghi lại lịch sử sự cố
-        itemHistories[_itemId].push(History({
-            state: State.Lost,
-            actor: _msgSender(),
-            timestamp: block.timestamp,
-            note: _reason
-        }));
-
-        emit ItemStateUpdated(_itemId, State.Lost, _reason); // Phát ra sự kiện
-    }
-
-    /**
-     * @dev Báo cáo mặt hàng bị hư hỏng tại điểm Nhà phân phối (Distributor).
-     * Chỉ người có vai trò DISTRIBUTOR_ROLE mới có thể gọi hàm này.
-     * Cập nhật trạng thái mặt hàng thành Damaged và ghi lại lý do.
-     * @param _itemId ID của mặt hàng bị hư hỏng.
-     * @param _reason Lý do chi tiết về sự hư hỏng.
-     */
-    function reportDamageAtDistributor(bytes32 _itemId, string memory _reason) external onlyRole(DISTRIBUTOR_ROLE) {
-        Item storage item = items[_itemId];
-        require(item.exists, "Item does not exist");
-        // Có thể thêm yêu cầu người gọi là chủ sở hữu hiện tại, hoặc đang ở trạng thái ReceivedAtDistributor
-
-        item.currentState = State.Damaged; // Cập nhật trạng thái thành Hư hỏng
-
-        // Ghi lại lịch sử sự cố
-        itemHistories[_itemId].push(History({
-            state: State.Damaged,
-            actor: _msgSender(),
-            timestamp: block.timestamp,
-            note: _reason
-        }));
-
-        emit ItemStateUpdated(_itemId, State.Damaged, _reason); // Phát ra sự kiện
-    }
-
-    /**
-     * @dev Báo cáo mặt hàng bị thất lạc tại điểm Nhà phân phối (Distributor).
-     * Chỉ người có vai trò DISTRIBUTOR_ROLE mới có thể gọi hàm này.
-     * Cập nhật trạng thái mặt hàng thành Lost và ghi lại lý do.
-     * @param _itemId ID của mặt hàng bị thất lạc.
-     * @param _reason Lý do chi tiết về sự thất lạc.
-     */
-    function reportLostAtDistributor(bytes32 _itemId, string memory _reason) external onlyRole(DISTRIBUTOR_ROLE) {
-        Item storage item = items[_itemId];
-        require(item.exists, "Item does not exist");
-        // Có thể thêm yêu cầu người gọi là chủ sở hữu hiện tại, hoặc đang ở trạng thái ReceivedAtDistributor
-
-        item.currentState = State.Lost; // Cập nhật trạng thái thành Thất lạc
-
-        // Ghi lại lịch sử sự cố
-        itemHistories[_itemId].push(History({
-            state: State.Lost,
-            actor: _msgSender(),
-            timestamp: block.timestamp,
-            note: _reason
-        }));
-
-        emit ItemStateUpdated(_itemId, State.Lost, _reason); // Phát ra sự kiện
-    }
-
-    // ----------- Chức năng quản lý chứng chỉ -----------
-
     /**
      * @dev Thêm một chứng chỉ (ví dụ: chứng nhận hữu cơ) vào hồ sơ của một mặt hàng cụ thể.
-     * Chỉ người có vai trò PRODUCER_ROLE mới có thể gọi hàm này.
+     * Chỉ người chủ sở hữu hiện tại có vai trò PRODUCER_ROLE và mặt hàng đang ở trạng thái PRODUCED mới có thể gọi hàm này.
      * Chứng chỉ được liên kết với ID mặt hàng và bao gồm tên, đơn vị cấp và ngày cấp.
      * @param _itemId ID của mặt hàng cần thêm chứng chỉ.
      * @param _certName Tên của chứng chỉ (ví dụ: "Organic Certified").
@@ -533,8 +519,12 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
      */
     function addCertificate(bytes32 _itemId, string memory _certName, string memory _certIssuer) external onlyRole(PRODUCER_ROLE) {
         Item storage item = items[_itemId];
+        // Yêu cầu: Mặt hàng phải tồn tại
         require(item.exists, "Item does not exist");
-        // Có thể thêm yêu cầu người gọi là chủ sở hữu hiện tại, hoặc mặt hàng đang ở trạng thái Produced
+        // Yêu cầu: Người gọi hàm phải là chủ sở hữu hiện tại của mặt hàng
+        require(item.currentOwner == _msgSender(), "Only current owner can add certificate");
+        // Yêu cầu: Mặt hàng phải đang ở trạng thái PRODUCED
+        require(item.currentState == State.PRODUCED, "Item must be in Produced state to add certificate");
 
         // Thêm chứng chỉ mới vào danh sách chứng chỉ của mặt hàng
         itemCertificates[_itemId].push(Certificate({
@@ -544,6 +534,14 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
         }));
 
         emit CertificateAdded(_itemId, _certName, _certIssuer); // Phát ra sự kiện
+
+        // Ghi lại lịch sử thêm chứng chỉ
+        itemHistories[_itemId].push(History({
+            state: item.currentState,
+            actor: _msgSender(),
+            timestamp: block.timestamp,
+            note: string(abi.encodePacked("Certificate added: ", _certName, " by ", _certIssuer))
+        }));
     }
 
     /**
