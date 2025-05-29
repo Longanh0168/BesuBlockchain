@@ -354,10 +354,8 @@ const ItemDetail = () => {
 
       if (issueType === 'Damaged') {
         // Sử dụng reportDamage hoặc reportDamageAtDistributor tùy thuộc vào vai trò
-        if (isTransporter) {
+        if (isTransporter || isDistributor) {
           tx = await contract.reportDamage(itemIdBytes32, reason);
-        } else if (isDistributor) {
-          tx = await contract.reportDamageAtDistributor(itemIdBytes32, reason);
         } else {
           message.error("Bạn không có quyền báo cáo hư hỏng.");
           setLoading(false);
@@ -365,10 +363,8 @@ const ItemDetail = () => {
         }
       } else if (issueType === 'Lost') {
         // Sử dụng reportLost hoặc reportLostAtDistributor tùy thuộc vào vai trò
-        if (isTransporter) {
+        if (isTransporter || isDistributor) {
           tx = await contract.reportLost(itemIdBytes32, reason);
-        } else if (isDistributor) {
-          tx = await contract.reportLostAtDistributor(itemIdBytes32, reason);
         } else {
           message.error("Bạn không có quyền báo cáo thất lạc.");
           setLoading(false);

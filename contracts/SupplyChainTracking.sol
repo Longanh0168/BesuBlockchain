@@ -472,11 +472,11 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
 
     /**
      * @dev Khách hàng mua mặt hàng từ Nhà bán lẻ.
-     * Chỉ người có vai trò RETAILER_ROLE và là chủ sở hữu hiện tại của mặt hàng mới có thể gọi hàm này.
+     * Chỉ người có vai trò CUSTOMER_ROLE mới có thể gọi hàm này.
      * Cập nhật trạng thái mặt hàng thành Sold và chuyển quyền sở hữu cho khách hàng.
      * @param _itemId ID của mặt hàng cần mua.
      */
-    function customerBuyItem(bytes32 _itemId) external {
+    function customerBuyItem(bytes32 _itemId) external onlyRole(CUSTOMER_ROLE) {
         Item storage item = items[_itemId];
 
         // Yêu cầu: Mặt hàng phải tồn tại

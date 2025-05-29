@@ -22,6 +22,7 @@ async function main() {
     transporter: "0xe83f7EA2eB8D5049d9162B1F2cfc9075a1C698D0",
     distributor: "0xBe85127318076116cf4C19c5Dd91C95503368FFe",
     retailer: "0xB85a94BB5D2F97D1CD517b7ec6208b869C4b2444",
+    customer: "0xAAfD5D06eAB12321852413ffE3A06233C33e8a66",
   };
 
 
@@ -53,11 +54,15 @@ async function main() {
   const TRANSPORTER_ROLE = await supplyChain.TRANSPORTER_ROLE();
   const DISTRIBUTOR_ROLE = await supplyChain.DISTRIBUTOR_ROLE();
   const RETAILER_ROLE = await supplyChain.RETAILER_ROLE();
+  const CUSTOMER_ROLE = await supplyChain.CUSTOMER_ROLE();
+  // In ra các định danh vai trò
+  console.log("Role identifiers fetched successfully:");
   console.log(` - DEFAULT_ADMIN_ROLE: ${DEFAULT_ADMIN_ROLE}`);
   console.log(` - PRODUCER_ROLE: ${PRODUCER_ROLE}`);
   console.log(` - TRANSPORTER_ROLE: ${TRANSPORTER_ROLE}`);
   console.log(` - DISTRIBUTOR_ROLE: ${DISTRIBUTOR_ROLE}`);
   console.log(` - RETAILER_ROLE: ${RETAILER_ROLE}`);
+  console.log(` - CUSTOMER_ROLE: ${CUSTOMER_ROLE}`);
 
   // Thực hiện cấp quyền
   console.log("\nGranting roles...");
@@ -78,6 +83,7 @@ async function main() {
   await grantRoleIfNotGranted(TRANSPORTER_ROLE, accounts.transporter, "TRANSPORTER_ROLE");
   await grantRoleIfNotGranted(DISTRIBUTOR_ROLE, accounts.distributor, "DISTRIBUTOR_ROLE");
   await grantRoleIfNotGranted(RETAILER_ROLE, accounts.retailer, "RETAILER_ROLE");
+  await grantRoleIfNotGranted(CUSTOMER_ROLE, accounts.customer, "CUSTOMER_ROLE");
 
   console.log("\n🎉 Role granting process finished!");
 }
