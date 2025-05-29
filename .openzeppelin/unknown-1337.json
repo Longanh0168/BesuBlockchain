@@ -2570,6 +2570,756 @@
           ]
         }
       }
+    },
+    "3521c5f4c65d35d006e82b95b684e303f8ed8b25551cff5869c19291ae19773a": {
+      "address": "0xd10b5162bbeaF34fadE65fd88280e5b5ccA7540A",
+      "txHash": "0xe171cc51f785a0a66b1dfd0d174ee8ba5dcbcff6c790066e4e1f693f8b81d378",
+      "layout": {
+        "solcVersion": "0.8.28",
+        "storage": [
+          {
+            "label": "tokenContract",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IERC20)2194",
+            "contract": "SupplyChainTracking",
+            "src": "contracts\\SupplyChainTracking.sol:84"
+          },
+          {
+            "label": "feeCollector",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_address",
+            "contract": "SupplyChainTracking",
+            "src": "contracts\\SupplyChainTracking.sol:84"
+          },
+          {
+            "label": "items",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_mapping(t_bytes32,t_struct(Item)2838_storage)",
+            "contract": "SupplyChainTracking",
+            "src": "contracts\\SupplyChainTracking.sol:85"
+          },
+          {
+            "label": "itemHistories",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_mapping(t_bytes32,t_array(t_struct(History)2848_storage)dyn_storage)",
+            "contract": "SupplyChainTracking",
+            "src": "contracts\\SupplyChainTracking.sol:87"
+          },
+          {
+            "label": "itemCertificates",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_mapping(t_bytes32,t_array(t_struct(Certificate)2816_storage)dyn_storage)",
+            "contract": "SupplyChainTracking",
+            "src": "contracts\\SupplyChainTracking.sol:88"
+          },
+          {
+            "label": "pendingTransfers",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_mapping(t_bytes32,t_struct(PendingTransfer)2857_storage)",
+            "contract": "SupplyChainTracking",
+            "src": "contracts\\SupplyChainTracking.sol:89"
+          },
+          {
+            "label": "allItemIds",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_array(t_bytes32)dyn_storage",
+            "contract": "SupplyChainTracking",
+            "src": "contracts\\SupplyChainTracking.sol:90"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)24_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(AccessControlStorage)34_storage": {
+            "label": "struct AccessControlUpgradeable.AccessControlStorage",
+            "members": [
+              {
+                "label": "_roles",
+                "type": "t_mapping(t_bytes32,t_struct(RoleData)24_storage)",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(InitializableStorage)145_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(RoleData)24_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "hasRole",
+                "type": "t_mapping(t_address,t_bool)",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_array(t_bytes32)dyn_storage": {
+            "label": "bytes32[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(Certificate)2816_storage)dyn_storage": {
+            "label": "struct SupplyChainTracking.Certificate[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(History)2848_storage)dyn_storage": {
+            "label": "struct SupplyChainTracking.History[]",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IERC20)2194": {
+            "label": "contract IERC20",
+            "numberOfBytes": "20"
+          },
+          "t_enum(State)2809": {
+            "label": "enum SupplyChainTracking.State",
+            "members": [
+              "PRODUCED",
+              "IN_TRANSIT",
+              "IN_TRANSIT_AT_TRANSPORTER",
+              "IN_TRANSIT_TO_DISTRIBUTOR",
+              "RECEIVED_AT_DISTRIBUTOR",
+              "IN_TRANSIT_TO_RETAILER",
+              "RECEIVED_AT_RETAILER",
+              "SOLD",
+              "DAMAGED",
+              "LOST"
+            ],
+            "numberOfBytes": "1"
+          },
+          "t_mapping(t_bytes32,t_array(t_struct(Certificate)2816_storage)dyn_storage)": {
+            "label": "mapping(bytes32 => struct SupplyChainTracking.Certificate[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_array(t_struct(History)2848_storage)dyn_storage)": {
+            "label": "mapping(bytes32 => struct SupplyChainTracking.History[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(Item)2838_storage)": {
+            "label": "mapping(bytes32 => struct SupplyChainTracking.Item)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(PendingTransfer)2857_storage)": {
+            "label": "mapping(bytes32 => struct SupplyChainTracking.PendingTransfer)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Certificate)2816_storage": {
+            "label": "struct SupplyChainTracking.Certificate",
+            "members": [
+              {
+                "label": "certName",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "certIssuer",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "issueDate",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_struct(History)2848_storage": {
+            "label": "struct SupplyChainTracking.History",
+            "members": [
+              {
+                "label": "state",
+                "type": "t_enum(State)2809",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "actor",
+                "type": "t_address",
+                "offset": 1,
+                "slot": "0"
+              },
+              {
+                "label": "timestamp",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "note",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_struct(Item)2838_storage": {
+            "label": "struct SupplyChainTracking.Item",
+            "members": [
+              {
+                "label": "id",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "name",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "description",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "currentOwner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "currentState",
+                "type": "t_enum(State)2809",
+                "offset": 20,
+                "slot": "3"
+              },
+              {
+                "label": "exists",
+                "type": "t_bool",
+                "offset": 21,
+                "slot": "3"
+              },
+              {
+                "label": "plannedDeliveryTime",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "costPrice",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "sellingPrice",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "itemIdString",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "7"
+              }
+            ],
+            "numberOfBytes": "256"
+          },
+          "t_struct(PendingTransfer)2857_storage": {
+            "label": "struct SupplyChainTracking.PendingTransfer",
+            "members": [
+              {
+                "label": "from",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "to",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "fromConfirmed",
+                "type": "t_bool",
+                "offset": 20,
+                "slot": "1"
+              },
+              {
+                "label": "toConfirmed",
+                "type": "t_bool",
+                "offset": 21,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.AccessControl": [
+            {
+              "contract": "AccessControlUpgradeable",
+              "label": "_roles",
+              "type": "t_mapping(t_bytes32,t_struct(RoleData)24_storage)",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\AccessControlUpgradeable.sol:61",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "319b31ad43fd6a3d908701cab2c346f87f850151a30ec06c863ce79b9d1108d8": {
+      "address": "0x167eA4b763246806f95bA6a9Fcb0cC3737A035dD",
+      "txHash": "0x76c656725ea0ddfc5b90bcf6273ee4012f1abcc115fc9eb2378255e2a4fcf11c",
+      "layout": {
+        "solcVersion": "0.8.28",
+        "storage": [
+          {
+            "label": "tokenContract",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IERC20)2194",
+            "contract": "SupplyChainTracking",
+            "src": "contracts\\SupplyChainTracking.sol:84"
+          },
+          {
+            "label": "feeCollector",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_address",
+            "contract": "SupplyChainTracking",
+            "src": "contracts\\SupplyChainTracking.sol:84"
+          },
+          {
+            "label": "items",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_mapping(t_bytes32,t_struct(Item)2838_storage)",
+            "contract": "SupplyChainTracking",
+            "src": "contracts\\SupplyChainTracking.sol:85"
+          },
+          {
+            "label": "itemHistories",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_mapping(t_bytes32,t_array(t_struct(History)2848_storage)dyn_storage)",
+            "contract": "SupplyChainTracking",
+            "src": "contracts\\SupplyChainTracking.sol:87"
+          },
+          {
+            "label": "itemCertificates",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_mapping(t_bytes32,t_array(t_struct(Certificate)2816_storage)dyn_storage)",
+            "contract": "SupplyChainTracking",
+            "src": "contracts\\SupplyChainTracking.sol:88"
+          },
+          {
+            "label": "pendingTransfers",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_mapping(t_bytes32,t_struct(PendingTransfer)2857_storage)",
+            "contract": "SupplyChainTracking",
+            "src": "contracts\\SupplyChainTracking.sol:89"
+          },
+          {
+            "label": "allItemIds",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_array(t_bytes32)dyn_storage",
+            "contract": "SupplyChainTracking",
+            "src": "contracts\\SupplyChainTracking.sol:90"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)24_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(AccessControlStorage)34_storage": {
+            "label": "struct AccessControlUpgradeable.AccessControlStorage",
+            "members": [
+              {
+                "label": "_roles",
+                "type": "t_mapping(t_bytes32,t_struct(RoleData)24_storage)",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(InitializableStorage)145_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(RoleData)24_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "hasRole",
+                "type": "t_mapping(t_address,t_bool)",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_array(t_bytes32)dyn_storage": {
+            "label": "bytes32[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(Certificate)2816_storage)dyn_storage": {
+            "label": "struct SupplyChainTracking.Certificate[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(History)2848_storage)dyn_storage": {
+            "label": "struct SupplyChainTracking.History[]",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IERC20)2194": {
+            "label": "contract IERC20",
+            "numberOfBytes": "20"
+          },
+          "t_enum(State)2809": {
+            "label": "enum SupplyChainTracking.State",
+            "members": [
+              "PRODUCED",
+              "IN_TRANSIT",
+              "IN_TRANSIT_AT_TRANSPORTER",
+              "IN_TRANSIT_TO_DISTRIBUTOR",
+              "RECEIVED_AT_DISTRIBUTOR",
+              "IN_TRANSIT_TO_RETAILER",
+              "RECEIVED_AT_RETAILER",
+              "SOLD",
+              "DAMAGED",
+              "LOST"
+            ],
+            "numberOfBytes": "1"
+          },
+          "t_mapping(t_bytes32,t_array(t_struct(Certificate)2816_storage)dyn_storage)": {
+            "label": "mapping(bytes32 => struct SupplyChainTracking.Certificate[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_array(t_struct(History)2848_storage)dyn_storage)": {
+            "label": "mapping(bytes32 => struct SupplyChainTracking.History[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(Item)2838_storage)": {
+            "label": "mapping(bytes32 => struct SupplyChainTracking.Item)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(PendingTransfer)2857_storage)": {
+            "label": "mapping(bytes32 => struct SupplyChainTracking.PendingTransfer)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Certificate)2816_storage": {
+            "label": "struct SupplyChainTracking.Certificate",
+            "members": [
+              {
+                "label": "certName",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "certIssuer",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "issueDate",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_struct(History)2848_storage": {
+            "label": "struct SupplyChainTracking.History",
+            "members": [
+              {
+                "label": "state",
+                "type": "t_enum(State)2809",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "actor",
+                "type": "t_address",
+                "offset": 1,
+                "slot": "0"
+              },
+              {
+                "label": "timestamp",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "note",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_struct(Item)2838_storage": {
+            "label": "struct SupplyChainTracking.Item",
+            "members": [
+              {
+                "label": "id",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "name",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "description",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "currentOwner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "currentState",
+                "type": "t_enum(State)2809",
+                "offset": 20,
+                "slot": "3"
+              },
+              {
+                "label": "exists",
+                "type": "t_bool",
+                "offset": 21,
+                "slot": "3"
+              },
+              {
+                "label": "plannedDeliveryTime",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "costPrice",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "sellingPrice",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "itemIdString",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "7"
+              }
+            ],
+            "numberOfBytes": "256"
+          },
+          "t_struct(PendingTransfer)2857_storage": {
+            "label": "struct SupplyChainTracking.PendingTransfer",
+            "members": [
+              {
+                "label": "from",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "to",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "fromConfirmed",
+                "type": "t_bool",
+                "offset": 20,
+                "slot": "1"
+              },
+              {
+                "label": "toConfirmed",
+                "type": "t_bool",
+                "offset": 21,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.AccessControl": [
+            {
+              "contract": "AccessControlUpgradeable",
+              "label": "_roles",
+              "type": "t_mapping(t_bytes32,t_struct(RoleData)24_storage)",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\AccessControlUpgradeable.sol:61",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
     }
   }
 }

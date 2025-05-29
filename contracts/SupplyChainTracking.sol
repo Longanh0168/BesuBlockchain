@@ -18,6 +18,7 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
     bytes32 public constant TRANSPORTER_ROLE = keccak256("TRANSPORTER_ROLE"); // Vai trò Người vận chuyển
     bytes32 public constant DISTRIBUTOR_ROLE = keccak256("DISTRIBUTOR_ROLE"); // Vai trò Nhà phân phối
     bytes32 public constant RETAILER_ROLE = keccak256("RETAILER_ROLE"); // Vai trò Nhà bán lẻ
+    bytes32 public constant CUSTOMER_ROLE = keccak256("CUSTOMER_ROLE"); // Vai trò Khách hàng
 
     // Enum định nghĩa các trạng thái có thể có của một mặt hàng trong chuỗi cung ứng
     enum State {
@@ -470,43 +471,52 @@ contract SupplyChainTracking is ContextUpgradeable, AccessControlUpgradeable, UU
     }
 
     /**
-     * @dev Đánh dấu mặt hàng đã được bán cho người tiêu dùng cuối cùng.
+     * @dev Khách hàng mua mặt hàng từ Nhà bán lẻ.
      * Chỉ người có vai trò RETAILER_ROLE và là chủ sở hữu hiện tại của mặt hàng mới có thể gọi hàm này.
-     * Cập nhật trạng thái mặt hàng thành Sold và chuyển quyền sở hữu cho người mua (khách hàng cuối).
-     * @param _itemId ID của mặt hàng cần đánh dấu đã bán.
-     * @param _customerAddress Địa chỉ ví của người mua (người tiêu dùng cuối).
+     * Cập nhật trạng thái mặt hàng thành Sold và chuyển quyền sở hữu cho khách hàng.
+     * @param _itemId ID của mặt hàng cần mua.
      */
-    function markAsSold(bytes32 _itemId, address _customerAddress) external onlyRole(RETAILER_ROLE) {
+    function customerBuyItem(bytes32 _itemId) external {
         Item storage item = items[_itemId];
 
         // Yêu cầu: Mặt hàng phải tồn tại
         require(item.exists, "Item does not exist");
-        // Yêu cầu: Người gọi hàm phải là chủ sở hữu hiện tại (người bán - Retailer)
-        require(item.currentOwner == _msgSender(), "Only current owner (Retailer) can mark sold");
-        // Yêu cầu: Địa chỉ người mua không phải là địa chỉ zero
-        require(_customerAddress != address(0), "Customer address cannot be zero");
-        // Yêu cầu: Trạng thái hiện tại của mặt hàng phải là ReceivedAtRetailer
-        require(item.currentState == State.RECEIVED_AT_RETAILER, "Item must be in ReceivedAtRetailer state to mark as sold");
+        // Yêu cầu: Mặt hàng phải ở trạng thái 'Received' (đã sẵn sàng bán tại Retailer)
+        require(item.currentState == State.RECEIVED_AT_RETAILER, "Item must be in RECEIVED_AT_RETAILER state to be bought by customer");
+
+        address currentRetailer = item.currentOwner;
+        // Yêu cầu: Chủ sở hữu hiện tại phải là một Retailer
+        require(hasRole(RETAILER_ROLE, currentRetailer), "Current owner is not a Retailer");
+
+        // LOGIC: Thanh toán sellingPrice từ khách hàng (_msgSender()) cho Nhà bán lẻ (currentRetailer)
+        if (item.sellingPrice > 0) {
+            require(address(tokenContract) != address(0), "Token contract address not set");
+            uint256 allowance = tokenContract.allowance(_msgSender(), address(this));
+            require(allowance >= item.sellingPrice, "Insufficient token allowance for selling price");
+
+            bool success = tokenContract.transferFrom(_msgSender(), currentRetailer, item.sellingPrice);
+            require(success, "Selling price token transfer failed");
+            emit PaymentTransferred(_itemId, _msgSender(), currentRetailer, item.sellingPrice, "Item Sale to Customer");
+        }
 
         // Cập nhật trạng thái thành Đã bán (SOLD)
         item.currentState = State.SOLD;
 
-        // Cập nhật chủ sở hữu hiện tại thành địa chỉ của người mua
-        item.currentOwner = _customerAddress;
+        // Cập nhật chủ sở hữu hiện tại thành địa chỉ của khách hàng
+        item.currentOwner = _msgSender();
 
         // Ghi lại lịch sử
-        // Actor vẫn là người thực hiện hành động (Retailer)
         itemHistories[_itemId].push(History({
             state: State.SOLD,
-            actor: _msgSender(),
+            actor: _msgSender(), // Khách hàng là người thực hiện hành động mua
             timestamp: block.timestamp,
             note: "Item sold to customer"
         }));
 
         // Phát ra sự kiện cập nhật trạng thái
-        emit ItemStateUpdated(_itemId, State.SOLD, "Item sold");
+        emit ItemStateUpdated(_itemId, State.SOLD, "Item sold to customer");
         // Phát ra sự kiện mới thông báo về việc bán cho khách hàng
-        emit ItemSoldToCustomer(_itemId, _msgSender(), _customerAddress);
+        emit ItemSoldToCustomer(_itemId, currentRetailer, _msgSender()); // Retailer sold to customer
     }
 
     /**

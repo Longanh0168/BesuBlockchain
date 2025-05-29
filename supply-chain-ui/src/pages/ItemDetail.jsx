@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import contractArtifact from '../artifacts/contracts/SupplyChainTracking.sol/SupplyChainTracking.json';
-import { CONTRACT_ADDRESS } from '../config';
+import tokenArtifact from '../artifacts/contracts/SupplyChainCoin.sol/SupplyChainCoin.json'; // Import token artifact
+import { CONTRACT_ADDRESS, TOKEN_ADDRESS } from '../config'; // Import TOKEN_ADDRESS
 import { useLocation } from 'react-router-dom';
 import {
   message,
@@ -26,6 +27,7 @@ import AddCertificateModal from '../components/AddCertificateModal';
 import ReportIssueModal from '../components/ReportIssueModal';
 import InitiateTransferModal from '../components/InitiateTransferModal';
 import ConfirmTransferModal from '../components/ConfirmTransferModal';
+import CustomerPurchaseModal from '../components/CustomerPurchaseModal'; // Import CustomerPurchaseModal mới
 
 // Import hàm tiện ích để lấy tên vai trò từ địa chỉ
 import { getNameByAddress } from '../utils/roles';
@@ -81,6 +83,7 @@ const getStateTagName = (state) => {
 const ItemDetail = () => {
   const [contract, setContract] = useState(null);
   const [signer, setSigner] = useState(null);
+  const [tokenContract, setTokenContract] = useState(null); // State mới cho hợp đồng token
   const [userAddress, setUserAddress] = useState(null);
   const [isProducer, setIsProducer] = useState(false);
   const [isTransporter, setIsTransporter] = useState(false);
@@ -96,7 +99,8 @@ const ItemDetail = () => {
   const [isReportIssueModalVisible, setIsReportIssueModalVisible] = useState(false);
   const [isInitiateTransferModalVisible, setIsInitiateTransferModalVisible] = useState(false);
   const [isConfirmTransferModalVisible, setIsConfirmTransferModalVisible] = useState(false);
-  const [tokenContractAddress, setTokenContractAddress] = useState(null);
+  const [isCustomerPurchaseModalVisible, setIsCustomerPurchaseModalVisible] = useState(false); // State cho CustomerPurchaseModal
+  const [supplyChainTokenAddress, setSupplyChainTokenAddress] = useState(null); // Đổi tên để tránh nhầm lẫn
   const [searchForm] = Form.useForm();
 
 
@@ -115,13 +119,16 @@ const ItemDetail = () => {
         setUserAddress(address);
 
         const supplyChain = new ethers.Contract(CONTRACT_ADDRESS, contractArtifact.abi, signerInstance);
+        const sccToken = new ethers.Contract(TOKEN_ADDRESS, tokenArtifact.abi, signerInstance); // Khởi tạo hợp đồng token
+        
         setContract(supplyChain);
         setSigner(signerInstance);
+        setTokenContract(sccToken); // Lưu instance của hợp đồng token
         message.success("Kết nối ví thành công!");
 
-        // Lấy địa chỉ hợp đồng token từ SupplyChainTracking contract
-        const tokenAddr = await supplyChain.tokenContract();
-        setTokenContractAddress(tokenAddr);
+        // Lấy địa chỉ hợp đồng token từ SupplyChainTracking contract (nếu cần, nhưng đã có TOKEN_ADDRESS)
+        const tokenAddrFromContract = await supplyChain.tokenContract();
+        setSupplyChainTokenAddress(tokenAddrFromContract); // Lưu địa chỉ token từ hợp đồng
 
         // Kiểm tra vai trò Producer
         const PRODUCER_ROLE_BYTES32 = ethers.keccak256(ethers.toUtf8Bytes("PRODUCER_ROLE"));
@@ -346,9 +353,27 @@ const ItemDetail = () => {
       message.info(`Đang báo cáo sự cố ${issueType}, vui lòng xác nhận giao dịch trong ví MetaMask của bạn.`);
 
       if (issueType === 'Damaged') {
-        tx = await contract.reportDamage(itemIdBytes32, reason);
+        // Sử dụng reportDamage hoặc reportDamageAtDistributor tùy thuộc vào vai trò
+        if (isTransporter) {
+          tx = await contract.reportDamage(itemIdBytes32, reason);
+        } else if (isDistributor) {
+          tx = await contract.reportDamageAtDistributor(itemIdBytes32, reason);
+        } else {
+          message.error("Bạn không có quyền báo cáo hư hỏng.");
+          setLoading(false);
+          return;
+        }
       } else if (issueType === 'Lost') {
-        tx = await contract.reportLost(itemIdBytes32, reason);
+        // Sử dụng reportLost hoặc reportLostAtDistributor tùy thuộc vào vai trò
+        if (isTransporter) {
+          tx = await contract.reportLost(itemIdBytes32, reason);
+        } else if (isDistributor) {
+          tx = await contract.reportLostAtDistributor(itemIdBytes32, reason);
+        } else {
+          message.error("Bạn không có quyền báo cáo thất lạc.");
+          setLoading(false);
+          return;
+        }
       } else {
         message.error("Loại sự cố không hợp lệ.");
         setLoading(false);
@@ -471,6 +496,52 @@ const ItemDetail = () => {
     }
   };
 
+  // Hàm xử lý khi khách hàng mua sản phẩm
+  const handleCustomerPurchaseSubmit = async () => {
+    if (!contract || !signer || !itemDetails || !tokenContract) {
+      message.error("Contract, ví hoặc chi tiết mặt hàng chưa sẵn sàng.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const itemIdBytes32 = ethers.keccak256(ethers.toUtf8Bytes(itemDetails.itemIdString));
+      const sellingPriceBigInt = ethers.parseUnits(itemDetails.sellingPrice.toString(), 18);
+      const userAddress = await signer.getAddress();
+
+      // Kiểm tra allowance của khách hàng
+      const allowance = await tokenContract.allowance(userAddress, CONTRACT_ADDRESS);
+
+      if (allowance < sellingPriceBigInt) {
+        message.info(`Vui lòng xác nhận giao dịch Approve ${itemDetails.sellingPrice} SCC cho hợp đồng trong ví MetaMask của bạn.`);
+        const approveTx = await tokenContract.approve(CONTRACT_ADDRESS, sellingPriceBigInt);
+        await approveTx.wait();
+        message.success("Đã phê duyệt token thành công!");
+      }
+
+      message.info("Đang thực hiện giao dịch mua, vui lòng xác nhận trong ví MetaMask của bạn.");
+      const tx = await contract.customerBuyItem(itemIdBytes32); // Gọi hàm customerBuyItem
+      await tx.wait();
+
+      message.success("Mua sản phẩm thành công!");
+      setIsCustomerPurchaseModalVisible(false);
+      fetchItemDetails(itemDetails.itemIdString);
+    } catch (err) {
+      console.error("Lỗi khi mua sản phẩm:", err);
+      let errorMessage = "Lỗi khi mua sản phẩm.";
+      if (err.code === 'ACTION_REJECTED') {
+        errorMessage = "Giao dịch đã bị từ chối bởi người dùng.";
+      } else if (err.data && err.data.message) {
+        errorMessage = err.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      message.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const certificateColumns = [
     { title: 'Tên chứng chỉ', dataIndex: 'certName', key: 'certName' },
     { title: 'Đơn vị cấp', dataIndex: 'certIssuer', key: 'certIssuer' },
@@ -496,6 +567,13 @@ const ItemDetail = () => {
     if (isRetailer) return 'RETAILER';
     return null;
   })();
+
+  // Kiểm tra điều kiện hiển thị nút "Mua sản phẩm"
+  const showBuyButton = itemDetails && 
+                       itemDetails.currentState === 'RECEIVED_AT_RETAILER' && // Hoặc 'RECEIVED' nếu bạn đã qua bước markAsReceived
+                       userAddress && 
+                       itemDetails.currentOwnerAddress.toLowerCase() !== userAddress.toLowerCase();
+
 
   return (
     <div style={{ padding: 24, maxWidth: 800, margin: '0 auto' }}>
@@ -536,6 +614,26 @@ const ItemDetail = () => {
               <Descriptions.Item label="Giá bán">{itemDetails.sellingPrice} SCC</Descriptions.Item>
             </Descriptions>
           </Card>
+
+          {/* Hiển thị thông tin giao dịch đang chờ xử lý */}
+          {pendingTransferDetails && (
+            <Card title="Giao dịch đang chờ xử lý" style={{ marginTop: 20, borderColor: '#1890ff' }}>
+              <Descriptions bordered column={1}>
+                <Descriptions.Item label="Từ">
+                  {pendingTransferDetails.fromName} ({pendingTransferDetails.fromAddress})
+                </Descriptions.Item>
+                <Descriptions.Item label="Đến">
+                  {pendingTransferDetails.toName} ({pendingTransferDetails.toAddress})
+                </Descriptions.Item>
+                <Descriptions.Item label="Người gửi đã xác nhận">
+                  {pendingTransferDetails.fromConfirmed ? <Tag color="green">Có</Tag> : <Tag color="red">Không</Tag>}
+                </Descriptions.Item>
+                <Descriptions.Item label="Người nhận đã xác nhận">
+                  {pendingTransferDetails.toConfirmed ? <Tag color="green">Có</Tag> : <Tag color="red">Không</Tag>}
+                </Descriptions.Item>
+              </Descriptions>
+            </Card>
+          )}
 
           <Space style={{ marginTop: 20 }} wrap>
             {/* Nút cập nhật giá bán */}
@@ -603,15 +701,26 @@ const ItemDetail = () => {
               </Button>
             )}
 
-            {/* Nút Đánh dấu đã bán (dành cho Retailer) */}
+            {/* Nút Đánh dấu đã nhận (dành cho Retailer) */}
             {isRetailer && userAddress && itemDetails?.currentOwnerAddress?.toLowerCase() === userAddress.toLowerCase() &&
-             itemDetails.currentState === 'RECEIVED_AT_RETAILER' && ( 
+             itemDetails.currentState === 'DELIVERED' && ( 
               <Button
                 type="primary"
-                onClick={() => message.info("Chức năng 'Bán cho khách hàng' sẽ được triển khai sau.")} 
+                onClick={() => message.info("Chức năng 'Đánh dấu đã nhận' sẽ được triển khai sau.")} // Placeholder for now
                 loading={loading}
               >
-                Bán cho khách hàng
+                Đánh dấu đã nhận
+              </Button>
+            )}
+
+            {/* Nút Mua sản phẩm (dành cho Khách hàng) */}
+            {showBuyButton && ( 
+              <Button
+                type="primary"
+                onClick={() => setIsCustomerPurchaseModalVisible(true)} // Mở modal CustomerPurchaseModal
+                loading={loading}
+              >
+                Mua sản phẩm
               </Button>
             )}
           </Space>
@@ -695,8 +804,17 @@ const ItemDetail = () => {
         loading={loading}
         itemDetails={itemDetails}
         pendingTransferDetails={pendingTransferDetails}
-        tokenContractAddress={tokenContractAddress}
+        tokenContractAddress={supplyChainTokenAddress} // Sử dụng supplyChainTokenAddress
         userAddress={userAddress}
+      />
+
+      {/* Modal Mua sản phẩm (Customer) */}
+      <CustomerPurchaseModal
+        visible={isCustomerPurchaseModalVisible}
+        onCancel={() => setIsCustomerPurchaseModalVisible(false)}
+        onSubmit={handleCustomerPurchaseSubmit}
+        loading={loading}
+        itemDetails={itemDetails} // Truyền chi tiết mặt hàng để hiển thị trong modal
       />
     </div>
   );
