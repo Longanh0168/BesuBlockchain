@@ -7,6 +7,7 @@ import { CONTRACT_ADDRESS } from './config';
 import CreateItem from './pages/CreateItem';
 import ItemDetail from './pages/ItemDetail';
 import ListItem from './pages/ListItem';
+import AccessControl from './pages/AccessControl';
 
 const { Header, Content, Footer } = Layout;
 const { Title } = Typography;
@@ -17,6 +18,7 @@ function App() {
   const [signer, setSigner] = useState(null);
   const [userAddress, setUserAddress] = useState(null);
   const [isProducer, setIsProducer] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loadingRoles, setLoadingRoles] = useState(true);
 
   // Function to determine the selected menu key based on the current pathname
@@ -30,6 +32,8 @@ function App() {
       return '3';
     } else if (pathname.startsWith('/item-detail')) {
       return '4';
+    } else if (pathname.startsWith('/access-control')) {
+      return '5';
     }
     return '1';
   };
@@ -56,6 +60,11 @@ function App() {
         const hasProducerRole = await supplyChain.hasRole(PRODUCER_ROLE_BYTES32, address);
         setIsProducer(hasProducerRole);
 
+        // Check DEFAULT_ADMIN_ROLE
+        const DEFAULT_ADMIN_ROLE_BYTES32 = await supplyChain.DEFAULT_ADMIN_ROLE();
+        const hasAdminRole = await supplyChain.hasRole(DEFAULT_ADMIN_ROLE_BYTES32, address);
+        setIsAdmin(hasAdminRole);
+
         message.success("Kết nối ví và kiểm tra vai trò thành công!");
       } catch (err) {
         message.error('Không thể kết nối ví hoặc kiểm tra vai trò: ' + err.message);
@@ -78,6 +87,7 @@ function App() {
         if (accounts.length === 0) {
           setUserAddress(null);
           setIsProducer(false);
+          setIsAdmin(false);
           setContract(null);
           setSigner(null);
           message.warning("Ví đã bị ngắt kết nối hoặc không có tài khoản nào được chọn.");
@@ -134,6 +144,19 @@ function App() {
           <Menu.Item key="4">
             <Link to="/item-detail">Xem chi tiết mặt hàng</Link>
           </Menu.Item>
+          {loadingRoles ? (
+            // Display loading state or disable the item while roles are loading
+            <Menu.Item key="5" disabled>
+              <Spin size="small" /> Đang tải...
+            </Menu.Item>
+          ) : (
+            // Conditionally display based on Admin role
+            isAdmin && (
+              <Menu.Item key="5">
+                <Link to="/access-control">Quản lý quyền truy cập</Link>
+              </Menu.Item>
+            )
+          )}
           {/* You can add other menu items here */}
         </Menu>
       </Header>
@@ -145,6 +168,7 @@ function App() {
             <Route path="/list-item" element={<ListItem />} />
             <Route path="/create-item" element={<CreateItem />} />
             <Route path="/item-detail" element={<ItemDetail />} />
+            <Route path="/access-control" element={<AccessControl />} />
             <Route path="/" element={
               <div style={{ textAlign: 'center', padding: '50px 0' }}>
                 <Title level={2}>Chào mừng đến với Hệ thống theo dõi chuỗi cung ứng</Title>

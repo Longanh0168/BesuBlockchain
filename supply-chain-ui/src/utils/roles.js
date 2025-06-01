@@ -1,3 +1,12 @@
+export const ROLE_OPTIONS = [
+  { value: "PRODUCER_ROLE", label: "Producer" },
+  { value: "TRANSPORTER_ROLE", label: "Transporter" },
+  { value: "DISTRIBUTOR_ROLE", label: "Distributor" },
+  { value: "RETAILER_ROLE", label: "Retailer" },
+  { value: "CUSTOMER_ROLE", label: "Customer" },
+  { value: "DEFAULT_ADMIN_ROLE", label: "Admin" },
+];
+
 export const ADDRESS_TO_NAME_MAP = {
   "0xa586c054754e674141b3e1067dd6163baae59417": "Administrator",
   "0x8eb326f586acf3010744ad3b2e83ce55d2f6cb54": "Producer",
