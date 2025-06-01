@@ -72,7 +72,7 @@ const getStateTagName = (state) => {
     case 'IN_TRANSIT_TO_DISTRIBUTOR': return 'Đang vận chuyển (Tới nhà phân phối)';
     case 'RECEIVED_AT_DISTRIBUTOR': return 'Đã nhận tại nhà phân phối';
     case 'IN_TRANSIT_TO_RETAILER': return 'Đang vận chuyển (Tới nhà bán lẻ)';
-    case 'RECEIVED_AT_RETAILER': return 'Đã nhận tại nhà bán lẻ';
+    case 'RECEIVED_AT_RETAILER': return 'Đã nhận tại nhà bán lẻ (Sẵn sàng bán)';
     case 'SOLD': return 'Đã bán';
     case 'DAMAGED': return 'Bị hư hỏng';
     case 'LOST': return 'Bị thất lạc';
@@ -89,6 +89,7 @@ const ItemDetail = () => {
   const [isTransporter, setIsTransporter] = useState(false);
   const [isDistributor, setIsDistributor] = useState(false);
   const [isRetailer, setIsRetailer] = useState(false);
+  const [isCustomer, setIsCustomer] = useState(false);
   const [itemDetails, setItemDetails] = useState(null);
   const [itemHistory, setItemHistory] = useState([]);
   const [itemCertificates, setItemCertificates] = useState([]);
@@ -99,8 +100,8 @@ const ItemDetail = () => {
   const [isReportIssueModalVisible, setIsReportIssueModalVisible] = useState(false);
   const [isInitiateTransferModalVisible, setIsInitiateTransferModalVisible] = useState(false);
   const [isConfirmTransferModalVisible, setIsConfirmTransferModalVisible] = useState(false);
-  const [isCustomerPurchaseModalVisible, setIsCustomerPurchaseModalVisible] = useState(false); // State cho CustomerPurchaseModal
-  const [supplyChainTokenAddress, setSupplyChainTokenAddress] = useState(null); // Đổi tên để tránh nhầm lẫn
+  const [isCustomerPurchaseModalVisible, setIsCustomerPurchaseModalVisible] = useState(false);
+  const [supplyChainTokenAddress, setSupplyChainTokenAddress] = useState(null);
   const [searchForm] = Form.useForm();
 
 
@@ -110,9 +111,10 @@ const ItemDetail = () => {
 
   // Hàm khởi tạo kết nối ví và hợp đồng
   const initConnection = useCallback(async () => {
+    setLoading(true);
     if (window.ethereum) {
       try {
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         const provider = new ethers.BrowserProvider(window.ethereum);
         const signerInstance = await provider.getSigner();
         const address = await signerInstance.getAddress();
@@ -130,32 +132,37 @@ const ItemDetail = () => {
         const tokenAddrFromContract = await supplyChain.tokenContract();
         setSupplyChainTokenAddress(tokenAddrFromContract); // Lưu địa chỉ token từ hợp đồng
 
-        // Kiểm tra vai trò Producer
+        // Kiểm tra tất cả các vai trò
         const PRODUCER_ROLE_BYTES32 = ethers.keccak256(ethers.toUtf8Bytes("PRODUCER_ROLE"));
-        const hasProducerRole = await supplyChain.hasRole(PRODUCER_ROLE_BYTES32, address);
-        setIsProducer(hasProducerRole);
-
-        // Kiểm tra vai trò Transporter
         const TRANSPORTER_ROLE_BYTES32 = ethers.keccak256(ethers.toUtf8Bytes("TRANSPORTER_ROLE"));
-        const hasTransporterRole = await supplyChain.hasRole(TRANSPORTER_ROLE_BYTES32, address);
-        setIsTransporter(hasTransporterRole);
-
-        // Kiểm tra vai trò Distributor
         const DISTRIBUTOR_ROLE_BYTES32 = ethers.keccak256(ethers.toUtf8Bytes("DISTRIBUTOR_ROLE"));
-        const hasDistributorRole = await supplyChain.hasRole(DISTRIBUTOR_ROLE_BYTES32, address);
-        setIsDistributor(hasDistributorRole);
-
-        // Kiểm tra vai trò Retailer
         const RETAILER_ROLE_BYTES32 = ethers.keccak256(ethers.toUtf8Bytes("RETAILER_ROLE"));
-        const hasRetailerRole = await supplyChain.hasRole(RETAILER_ROLE_BYTES32, address);
-        setIsRetailer(hasRetailerRole);
+        const CUSTOMER_ROLE_BYTES32 = ethers.keccak256(ethers.toUtf8Bytes("CUSTOMER_ROLE"));
+
+        setIsProducer(await supplyChain.hasRole(PRODUCER_ROLE_BYTES32, address));
+        setIsTransporter(await supplyChain.hasRole(TRANSPORTER_ROLE_BYTES32, address));
+        setIsDistributor(await supplyChain.hasRole(DISTRIBUTOR_ROLE_BYTES32, address));
+        setIsRetailer(await supplyChain.hasRole(RETAILER_ROLE_BYTES32, address));
+        setIsCustomer(await supplyChain.hasRole(CUSTOMER_ROLE_BYTES32, address));
 
       } catch (err) {
         message.error('Không thể kết nối ví: ' + err.message);
         console.error("Lỗi kết nối ví:", err);
+        setUserAddress(null); // Reset user address on error
+        setIsProducer(false);
+        setIsTransporter(false);
+        setIsDistributor(false);
+        setIsRetailer(false);
+        setIsCustomer(false);
       }
     } else {
       message.error('Vui lòng cài đặt MetaMask!');
+      setUserAddress(null); // Reset user address if MetaMask not found
+      setIsProducer(false);
+      setIsTransporter(false);
+      setIsDistributor(false);
+      setIsRetailer(false);
+      setIsCustomer(false);
     }
     setLoading(false);
   }, []);
@@ -254,15 +261,67 @@ const ItemDetail = () => {
   }, [contract]);
 
   useEffect(() => {
-    initConnection();
-  }, [initConnection]);
+    initConnection(); // Initial connection and role check
+
+    // Add event listener for accountsChanged
+    if (window.ethereum) {
+      const handleAccountsChanged = (accounts) => {
+        console.log("Accounts changed in ItemDetail:", accounts);
+        if (accounts.length === 0) {
+          // User disconnected all accounts
+          setUserAddress(null);
+          setIsProducer(false);
+          setIsTransporter(false);
+          setIsDistributor(false);
+          setIsRetailer(false);
+          setIsCustomer(false);
+          setContract(null); // Reset contract to trigger re-init if needed
+          setSigner(null);
+          setTokenContract(null);
+          setSupplyChainTokenAddress(null);
+          setItemDetails(null); // Clear item details as context is lost
+          setPendingTransferDetails(null);
+          message.warning("Ví đã bị ngắt kết nối hoặc không có tài khoản nào được chọn.");
+          setLoading(false);
+        } else {
+          // Account changed, re-initialize connection and roles
+          initConnection(); // This will update contract, userAddress, and roles
+        }
+      };
+
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+
+      // Cleanup function
+      return () => {
+        if (window.ethereum) {
+          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        }
+      };
+    }
+  }, [initConnection]); // Only initConnection as a dependency.
 
   useEffect(() => {
-    if (contract && itemIdFromUrl) {
-      searchForm.setFieldsValue({ itemId: itemIdFromUrl });
-      fetchItemDetails(itemIdFromUrl);
+    // This effect runs when `contract`, `itemIdFromUrl`, `fetchItemDetails`, `searchForm`, or `userAddress` changes.
+    // It's responsible for fetching item details based on URL or previously loaded item.
+    if (contract && userAddress) { // Ensure contract and userAddress are available
+      const currentItemId = itemIdFromUrl; // Prioritize URL ID
+      if (currentItemId) {
+        searchForm.setFieldsValue({ itemId: currentItemId });
+        fetchItemDetails(currentItemId);
+      } else if (itemDetails?.itemIdString) { // If no URL ID but an item was previously loaded
+        searchForm.setFieldsValue({ itemId: itemDetails.itemIdString });
+        fetchItemDetails(itemDetails.itemIdString);
+      } else {
+        // If no ID in URL and no item previously loaded, clear the form
+        searchForm.resetFields();
+      }
+    } else if (!contract && !userAddress) {
+      // If wallet disconnected or not initialized, clear item details and form
+      setItemDetails(null);
+      setPendingTransferDetails(null);
+      searchForm.resetFields();
     }
-  }, [contract, itemIdFromUrl, fetchItemDetails, searchForm]);
+  }, [contract, itemIdFromUrl, fetchItemDetails, searchForm, userAddress]);
 
   const handleSearchSubmit = (values) => {
     if (!contract) {
@@ -561,12 +620,16 @@ const ItemDetail = () => {
     if (isTransporter) return 'TRANSPORTER';
     if (isDistributor) return 'DISTRIBUTOR';
     if (isRetailer) return 'RETAILER';
+    if (isCustomer) return 'CUSTOMER';
     return null;
   })();
 
   // Kiểm tra điều kiện hiển thị nút "Mua sản phẩm"
+  // Nút này chỉ hiển thị nếu item ở trạng thái 'RECEIVED_AT_RETAILER' (đã sẵn sàng bán tại Retailer)
+  // và người dùng hiện tại có vai trò CUSTOMER và không phải là chủ sở hữu của mặt hàng.
   const showBuyButton = itemDetails && 
-                       itemDetails.currentState === 'RECEIVED_AT_RETAILER' && // Hoặc 'RECEIVED' nếu bạn đã qua bước markAsReceived
+                       itemDetails.currentState === 'RECEIVED_AT_RETAILER' && 
+                       isCustomer &&
                        userAddress && 
                        itemDetails.currentOwnerAddress.toLowerCase() !== userAddress.toLowerCase();
 
@@ -694,18 +757,6 @@ const ItemDetail = () => {
                 loading={loading}
               >
                 Xác nhận chuyển giao
-              </Button>
-            )}
-
-            {/* Nút Đánh dấu đã nhận (dành cho Retailer) */}
-            {isRetailer && userAddress && itemDetails?.currentOwnerAddress?.toLowerCase() === userAddress.toLowerCase() &&
-             itemDetails.currentState === 'DELIVERED' && ( 
-              <Button
-                type="primary"
-                onClick={() => message.info("Chức năng 'Đánh dấu đã nhận' sẽ được triển khai sau.")} // Placeholder for now
-                loading={loading}
-              >
-                Đánh dấu đã nhận
               </Button>
             )}
 
