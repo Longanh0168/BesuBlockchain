@@ -8,6 +8,7 @@ import CreateItem from './pages/CreateItem';
 import ItemDetail from './pages/ItemDetail';
 import ListItem from './pages/ListItem';
 import AccessControl from './pages/AccessControl';
+import TokenManagement from './pages/TokenManagement';
 
 const { Header, Content, Footer } = Layout;
 const { Title } = Typography;
@@ -34,6 +35,8 @@ function App() {
       return '4';
     } else if (pathname.startsWith('/access-control')) {
       return '5';
+    } else if (pathname.startsWith('/token-management')) {
+      return '6';
     }
     return '1';
   };
@@ -157,6 +160,19 @@ function App() {
               </Menu.Item>
             )
           )}
+          {loadingRoles ? (
+            // Display loading state or disable the item while roles are loading
+            <Menu.Item key="6" disabled>
+              <Spin size="small" /> Đang tải...
+            </Menu.Item>
+          ) : (
+            // Conditionally display based on Admin role
+            isAdmin && (
+              <Menu.Item key="6">
+                <Link to="/token-management">Quản lý Token</Link>
+              </Menu.Item>
+            )
+          )}
           {/* You can add other menu items here */}
         </Menu>
       </Header>
@@ -169,6 +185,7 @@ function App() {
             <Route path="/create-item" element={<CreateItem />} />
             <Route path="/item-detail" element={<ItemDetail />} />
             <Route path="/access-control" element={<AccessControl />} />
+            <Route path="/token-management" element={<TokenManagement />} />
             <Route path="/" element={
               <div style={{ textAlign: 'center', padding: '50px 0' }}>
                 <Title level={2}>Chào mừng đến với Hệ thống theo dõi chuỗi cung ứng</Title>
