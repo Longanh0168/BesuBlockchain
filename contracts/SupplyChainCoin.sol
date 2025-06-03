@@ -2,18 +2,18 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol"; // Để quản lý quyền sở hữu và các hàm đặc biệt như mint
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title SupplyChainCoin
- * @dev Hợp đồng token ERC20 đơn giản với chức năng mint và burn,
+ * @dev Hợp đồng token ERC20 đơn giản với chức năng mint và ownerBurn,
  * được sở hữu bởi người triển khai.
  */
 contract SupplyChainCoin is ERC20, Ownable {
     /**
      * @dev Constructor để khởi tạo token.
      * @param initialOwner Địa chỉ sẽ là chủ sở hữu ban đầu của hợp đồng token.
-     * Chủ sở hữu này sẽ có quyền mint token.
+     * Chủ sở hữu này sẽ có quyền mint và ownerBurn token.
      * @param name_ Tên của token.
      * @param symbol_ Ký hiệu của token.
      */
@@ -35,21 +35,13 @@ contract SupplyChainCoin is ERC20, Ownable {
     }
 
     /**
-     * @dev Hủy `amount` token từ tài khoản người gọi (`msg.sender`).
-     * @param amount Số lượng token cần hủy.
-     */
-    function burn(uint256 amount) public {
-        _burn(msg.sender, amount);
-    }
-
-    /**
      * @dev Hủy `amount` token từ tài khoản `account`.
-     * Yêu cầu `account` phải cho phép `msg.sender` sử dụng `amount` token thông qua `approve`.
+     * Chỉ có thể được gọi bởi chủ sở hữu hợp đồng.
+     * KHÔNG yêu cầu `account` phải cho phép `msg.sender` sử dụng token thông qua `approve`.
      * @param account Địa chỉ có token cần hủy.
      * @param amount Số lượng token cần hủy.
      */
-    function burnFrom(address account, uint256 amount) public {
-        _spendAllowance(account, msg.sender, amount); // Kiểm tra và giảm allowance
+    function ownerBurn(address account, uint256 amount) public onlyOwner {
         _burn(account, amount);
     }
 

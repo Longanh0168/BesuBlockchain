@@ -44,7 +44,7 @@ node 2 trở đi khác nhau ở chỗ có thêm --bootnodes và --p2p-port
   docker run --rm --name node2 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8547:8546 hyperledger/besu:latest `
     --data-path=/config/Node-2/data `
     --genesis-file=/config/genesis.json `
-    --bootnodes=enode://26e7c76a4850abe6b2478f20c6cc1cf47f6b48c8b922c6d28e61a206cde4dc2514dce197397d5cb1cc8018d0479fcb7bd38c0d15958821117c26a243aa2993ff@172.18.0.2:30303 `
+    --bootnodes=enode://8e02bded72db0887f2b90b01ac8d2d066cd1bae9ef0658d6470deb2b5e88523dae93b03f8497d167fd17a63f61fe6124d6df6e65e324cfd978e155aceaf167ae@172.18.0.2:30303 `
     --p2p-port=30304 `
     --rpc-http-enabled `
     --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
@@ -62,7 +62,7 @@ node 2 trở đi khác nhau ở chỗ có thêm --bootnodes và --p2p-port
   docker run --rm --name node3 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8548:8547 hyperledger/besu:latest `
     --data-path=/config/Node-3/data `
     --genesis-file=/config/genesis.json `
-    --bootnodes=enode://26e7c76a4850abe6b2478f20c6cc1cf47f6b48c8b922c6d28e61a206cde4dc2514dce197397d5cb1cc8018d0479fcb7bd38c0d15958821117c26a243aa2993ff@172.18.0.2:30303 `
+    --bootnodes=enode://8e02bded72db0887f2b90b01ac8d2d066cd1bae9ef0658d6470deb2b5e88523dae93b03f8497d167fd17a63f61fe6124d6df6e65e324cfd978e155aceaf167ae@172.18.0.2:30303 `
     --p2p-port=30305 `
     --rpc-http-enabled `
     --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
@@ -79,7 +79,7 @@ node 2 trở đi khác nhau ở chỗ có thêm --bootnodes và --p2p-port
   docker run --rm --name node4 --network besu-network-ibft-2 -v D:\Besu-Private\IBFT-Network:/config -p 8549:8548 hyperledger/besu:latest `
     --data-path=/config/Node-4/data `
     --genesis-file=/config/genesis.json `
-    --bootnodes=enode://26e7c76a4850abe6b2478f20c6cc1cf47f6b48c8b922c6d28e61a206cde4dc2514dce197397d5cb1cc8018d0479fcb7bd38c0d15958821117c26a243aa2993ff@172.18.0.2:30303 `
+    --bootnodes=enode://8e02bded72db0887f2b90b01ac8d2d066cd1bae9ef0658d6470deb2b5e88523dae93b03f8497d167fd17a63f61fe6124d6df6e65e324cfd978e155aceaf167ae@172.18.0.2:30303 `
     --p2p-port=30306 `
     --rpc-http-enabled `
     --rpc-http-api=ETH,NET,IBFT,ADMIN,WEB3,DEBUG,TXPOOL `
@@ -208,13 +208,14 @@ Invoke-RestMethod -Uri http://localhost:8545 -Method POST -Body $body -ContentTy
 /// biên dịch contract
 npx hardhat compile
 
+Kết quả biên dịch:
+Compiled 22 Solidity files successfully (evm target: paris).
 
 // Các bước triển khai hợp đồng thông minh Supply Chain lên hệ thống Besu sử dụng Hardhat
 // Bước 1: deploy SupplyChainCoin contract
 PS D:\Besu-Private\IBFT-Network> npx hardhat run scripts/deployToken.js --network besu_local
 
 Kết quả biên dịch:
-Compiled 22 Solidity files successfully (evm target: paris).
 Deploying SupplyChainCoin with the account: 0xa586c054754e674141B3E1067dD6163Baae59417
 Account ETH balance: 100000000000000000000000
 SupplyChainCoin (SCC) deployed to: 0x159901Af979465F6c2741fB65Da5CBeea5f6B4Ae
@@ -284,11 +285,16 @@ Role identifiers fetched successfully:
 
 Granting roles...
  -> Account 0xa586c054754e674141B3E1067dD6163Baae59417 already has role DEFAULT_ADMIN_ROLE. Skipping.
- -> Account 0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54 already has role PRODUCER_ROLE. Skipping.
- -> Account 0xe83f7EA2eB8D5049d9162B1F2cfc9075a1C698D0 already has role TRANSPORTER_ROLE. Skipping.
- -> Account 0xBe85127318076116cf4C19c5Dd91C95503368FFe already has role DISTRIBUTOR_ROLE. Skipping.
- -> Account 0xB85a94BB5D2F97D1CD517b7ec6208b869C4b2444 already has role RETAILER_ROLE. Skipping.
- -> Account 0xAAfD5D06eAB12321852413ffE3A06233C33e8a66 already has role CUSTOMER_ROLE. Skipping.
+ -> Granting PRODUCER_ROLE to 0x8Eb326f586acf3010744Ad3B2E83cE55D2F6Cb54...
+    Done.
+ -> Granting TRANSPORTER_ROLE to 0xe83f7EA2eB8D5049d9162B1F2cfc9075a1C698D0...
+    Done.
+ -> Granting DISTRIBUTOR_ROLE to 0xBe85127318076116cf4C19c5Dd91C95503368FFe...
+    Done.
+ -> Granting RETAILER_ROLE to 0xB85a94BB5D2F97D1CD517b7ec6208b869C4b2444...
+    Done.
+ -> Granting CUSTOMER_ROLE to 0xAAfD5D06eAB12321852413ffE3A06233C33e8a66...
+    Done.
 
 🎉 Role granting process finished!
 

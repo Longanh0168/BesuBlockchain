@@ -16,6 +16,7 @@ import {
 } from 'antd';
 
 import MintTokenModal from '../components/MintTokenModal';
+import BurnTokenModal from '../components/BurnTokenModal';
 
 // Import các tiện ích về vai trò và địa chỉ
 import { getNameByAddress, ADDRESS_TO_NAME_MAP } from '../utils/roles';
@@ -32,6 +33,7 @@ const TokenManagement = () => {
   const [accountsBalances, setAccountsBalances] = useState([]); // Dữ liệu các tài khoản và số dư SCC của họ
 
   const [isMintModalVisible, setIsMintModalVisible] = useState(false);
+  const [isBurnModalVisible, setIsBurnModalVisible] = useState(false);
   const [selectedAccountForTokenAction, setSelectedAccountForTokenAction] = useState(null); // Tài khoản được chọn để mint/burn
 
   // Hàm khởi tạo kết nối ví và hợp đồng token
@@ -167,6 +169,39 @@ const TokenManagement = () => {
     }
   };
 
+  // Hàm xử lý Burn Token (ownerBurn)
+  const handleBurnSubmit = async (accountAddress, amount) => {
+    if (!tokenContract || !signer) {
+      message.error("Hợp đồng token hoặc ví chưa sẵn sàng.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const parsedAmount = ethers.parseUnits(amount.toString(), 18); // Chuyển đổi số lượng sang BigInt
+      message.info(`Đang hủy ${amount} SCC từ ${accountAddress}, vui lòng xác nhận giao dịch.`);
+
+      // Gọi hàm ownerBurn mới (không cần kiểm tra allowance)
+      const tx = await tokenContract.connect(signer).ownerBurn(accountAddress, parsedAmount);
+      await tx.wait();
+      message.success(`Đã hủy ${amount} SCC thành công từ ${accountAddress}!`);
+      setIsBurnModalVisible(false);
+      await fetchAccountBalances(tokenContract); // Tải lại số dư sau khi burn
+    } catch (err) {
+      console.error("Lỗi khi hủy token:", err);
+      let errorMessage = "Lỗi khi hủy token.";
+      if (err.code === 'ACTION_REJECTED') {
+        errorMessage = "Giao dịch đã bị từ chối bởi người dùng.";
+      } else if (err.data && err.data.message) {
+        errorMessage = err.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      message.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const columns = [
     {
       title: 'Tên tài khoản',
@@ -200,6 +235,18 @@ const TokenManagement = () => {
             loading={loading}
           >
             Cấp SCC
+          </Button>
+          <Button
+            type="dashed"
+            danger
+            size="small"
+            onClick={() => {
+              setSelectedAccountForTokenAction(record.address);
+              setIsBurnModalVisible(true);
+            }}
+            loading={loading}
+          >
+            Thu hồi SCC
           </Button>
         </Space>
       ),
@@ -247,6 +294,18 @@ const TokenManagement = () => {
           setSelectedAccountForTokenAction(null);
         }}
         onSubmit={handleMintSubmit}
+        loading={loading}
+        initialAccountAddress={selectedAccountForTokenAction}
+      />
+
+      {/* Modal Thu hồi SCC */}
+      <BurnTokenModal
+        visible={isBurnModalVisible}
+        onCancel={() => {
+          setIsBurnModalVisible(false);
+          setSelectedAccountForTokenAction(null);
+        }}
+        onSubmit={handleBurnSubmit}
         loading={loading}
         initialAccountAddress={selectedAccountForTokenAction}
       />
