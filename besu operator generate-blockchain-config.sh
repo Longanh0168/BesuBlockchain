@@ -368,10 +368,10 @@ docker run --rm --name prometheus --network besu-network-ibft-2 ` # Chạy conta
 
 2. Chạy container Grafana
 Công dụng chính: Khởi động container Grafana để hiển thị dữ liệu metrics đã thu thập bởi Prometheus thông qua dashboard.
-chạy cổng: localhost:3000
+chạy cổng: localhost:3001
 
 docker run --rm --name grafana --network besu-network-ibft-2 `
-  -p 3000:3000 `
+  -p 3001:3000 `
   -v D:\Besu-Private\IBFT-Network\Monitoring\grafana\data:/var/lib/grafana `
   grafana/grafana
 

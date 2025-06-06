@@ -13,6 +13,7 @@ import {
   Space,
   Tag,
   Card,
+  App as AntdApp
 } from 'antd';
 
 // Import các modal đã có
@@ -38,6 +39,7 @@ const AccessControl = () => {
   const [selectedAccountForRoleAction, setSelectedAccountForRoleAction] = useState(null);
   const [selectedAccountCurrentRoles, setSelectedAccountCurrentRoles] = useState([]); // Lưu trữ các vai trò hiện có của tài khoản được chọn
   const [rolesToGrantOptions, setRolesToGrantOptions] = useState([]); // Lưu trữ các vai trò có thể cấp (chưa có)
+  const { message: messageApi } = AntdApp.useApp();
 
   // Hàm khởi tạo kết nối ví và hợp đồng
   const initConnection = useCallback(async () => {
@@ -60,22 +62,22 @@ const AccessControl = () => {
         setIsAdmin(hasAdminRole);
 
         if (!hasAdminRole) {
-          message.error("Bạn không có quyền truy cập trang này.");
+          messageApi.error("Bạn không có quyền truy cập trang này.");
           navigate('/'); // Chuyển hướng về trang chủ nếu không phải Admin
           setLoading(false);
           return;
         }
 
-        message.success("Kết nối ví và kiểm tra vai trò thành công!");
+        messageApi.success("Kết nối ví và kiểm tra vai trò thành công!");
         await fetchAccountsAndRoles(supplyChain); // Fetch dữ liệu tài khoản và vai trò
       } catch (err) {
-        message.error('Không thể kết nối ví hoặc kiểm tra vai trò: ' + err.message);
+        messageApi.error('Không thể kết nối ví hoặc kiểm tra vai trò: ' + err.message);
         console.error("Lỗi kết nối ví hoặc kiểm tra vai trò:", err);
         setLoading(false);
         navigate('/'); // Chuyển hướng về trang chủ nếu có lỗi
       }
     } else {
-      message.error('Vui lòng cài đặt MetaMask!');
+      messageApi.error('Vui lòng cài đặt MetaMask!');
       setLoading(false);
       navigate('/'); // Chuyển hướng về trang chủ nếu không có MetaMask
     }
@@ -109,7 +111,7 @@ const AccessControl = () => {
       setAccountsData(fetchedAccounts);
     } catch (error) {
       console.error("Lỗi khi tải dữ liệu tài khoản và vai trò:", error);
-      message.error("Lỗi khi tải dữ liệu tài khoản và vai trò: " + error.message);
+      messageApi.error("Lỗi khi tải dữ liệu tài khoản và vai trò: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -129,7 +131,7 @@ const AccessControl = () => {
           setContract(null);
           setSigner(null);
           setAccountsData([]);
-          message.warning("Ví đã bị ngắt kết nối hoặc không có tài khoản nào được chọn.");
+          messageApi.warning("Ví đã bị ngắt kết nối hoặc không có tài khoản nào được chọn.");
           setLoading(false);
           navigate('/'); // Chuyển hướng về trang chủ
         } else {
@@ -151,16 +153,16 @@ const AccessControl = () => {
   // Hàm xử lý cấp quyền truy cập
   const handleGrantAccessSubmit = async (roleString, accountAddress) => {
     if (!contract || !signer) {
-      message.error("Contract hoặc ví chưa sẵn sàng.");
+      messageApi.error("Contract hoặc ví chưa sẵn sàng.");
       return;
     }
     setLoading(true);
     try {
       const roleBytes32 = ethers.keccak256(ethers.toUtf8Bytes(roleString));
-      message.info(`Đang cấp vai trò ${roleString} cho ${accountAddress}, vui lòng xác nhận giao dịch.`);
+      messageApi.info(`Đang cấp vai trò ${roleString} cho ${accountAddress}, vui lòng xác nhận giao dịch.`);
       const tx = await contract.grantAccess(roleBytes32, accountAddress);
       await tx.wait();
-      message.success(`Đã cấp vai trò ${roleString} thành công cho ${accountAddress}!`);
+      messageApi.success(`Đã cấp vai trò ${roleString} thành công cho ${accountAddress}!`);
       setIsGrantModalVisible(false);
       await fetchAccountsAndRoles(contract); // Tải lại dữ liệu sau khi thay đổi
     } catch (err) {
@@ -173,7 +175,7 @@ const AccessControl = () => {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      message.error(errorMessage);
+      messageApi.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -182,16 +184,16 @@ const AccessControl = () => {
   // Hàm xử lý thu hồi quyền truy cập
   const handleRevokeAccessSubmit = async (roleString, accountAddress) => {
     if (!contract || !signer) {
-      message.error("Contract hoặc ví chưa sẵn sàng.");
+      messageApi.error("Contract hoặc ví chưa sẵn sàng.");
       return;
     }
     setLoading(true);
     try {
       const roleBytes32 = ethers.keccak256(ethers.toUtf8Bytes(roleString));
-      message.info(`Đang thu hồi vai trò ${roleString} từ ${accountAddress}, vui lòng xác nhận giao dịch.`);
+      messageApi.info(`Đang thu hồi vai trò ${roleString} từ ${accountAddress}, vui lòng xác nhận giao dịch.`);
       const tx = await contract.revokeAccess(roleBytes32, accountAddress);
       await tx.wait();
-      message.success(`Đã thu hồi vai trò ${roleString} thành công từ ${accountAddress}!`);
+      messageApi.success(`Đã thu hồi vai trò ${roleString} thành công từ ${accountAddress}!`);
       setIsRevokeModalVisible(false);
       await fetchAccountsAndRoles(contract); // Tải lại dữ liệu sau khi thay đổi
     } catch (err) {
@@ -204,7 +206,7 @@ const AccessControl = () => {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      message.error(errorMessage);
+      messageApi.error(errorMessage);
     } finally {
       setLoading(false);
     }

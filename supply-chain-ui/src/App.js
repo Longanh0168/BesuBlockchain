@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Layout, Menu, Typography, message, Spin } from 'antd';
+import { Layout, Menu, Typography, message, Spin, App as AntdApp } from 'antd';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { ethers } from 'ethers';
 import contractArtifact from './artifacts/contracts/SupplyChainTracking.sol/SupplyChainTracking.json';
@@ -21,7 +21,8 @@ function App() {
   const [isProducer, setIsProducer] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loadingRoles, setLoadingRoles] = useState(true);
-
+  const { message: messageApi } = AntdApp.useApp();
+  
   // Function to determine the selected menu key based on the current pathname
   const getSelectedKey = () => {
     const { pathname } = location;
@@ -70,18 +71,17 @@ function App() {
 
         message.success("Kết nối ví và kiểm tra vai trò thành công!");
       } catch (err) {
-        message.error('Không thể kết nối ví hoặc kiểm tra vai trò: ' + err.message);
+        messageApi.error('Không thể kết nối ví hoặc kiểm tra vai trò: ' + err.message);
         console.error("Lỗi kết nối ví hoặc kiểm tra vai trò:", err);
       }
     } else {
-      message.error('Vui lòng cài đặt MetaMask!');
+      messageApi.error('Vui lòng cài đặt MetaMask!');
     }
     setLoadingRoles(false); // End loading roles
   }, []);
 
   useEffect(() => {
     initWeb3AndRoles();
-
     // Add event listener for accountsChanged
     if (window.ethereum) {
       const handleAccountsChanged = (accounts) => {
@@ -208,9 +208,11 @@ function App() {
 // Wrap the App component in Router for useLocation hook to work
 function AppWrapper() {
   return (
-    <Router>
-      <App />
-    </Router>
+    <AntdApp>
+      <Router>
+        <App />
+      </Router>
+    </AntdApp>
   );
 }
 

@@ -13,6 +13,7 @@ import {
   Button,
   message, // Import message từ antd
   Typography,
+  App as AntdApp
 } from 'antd';
 
 const { TextArea } = Input;
@@ -24,7 +25,7 @@ const CreateItem = () => {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate(); // Khởi tạo hook useNavigate
-
+  const { message: messageApi } = AntdApp.useApp();
   useEffect(() => {
     const init = async () => {
       if (window.ethereum) {
@@ -40,17 +41,17 @@ const CreateItem = () => {
           setToken(tokenContract);
           setSigner(signer);
         } catch (err) {
-          message.error('Không thể kết nối ví: ' + err.message);
+          messageApi.error('Không thể kết nối ví: ' + err.message);
         }
       } else {
-        message.error('Vui lòng cài đặt MetaMask!');
+        messageApi.error('Vui lòng cài đặt MetaMask!');
       }
     };
     init();
   }, []);
 
   const handleSubmit = async (values) => {
-    if (!contract || !token || !signer) return message.error("Contract chưa sẵn sàng");
+    if (!contract || !token || !signer) return messageApi.error("Contract chưa sẵn sàng");
 
     setLoading(true);
     try {
@@ -68,13 +69,13 @@ const CreateItem = () => {
 
       // Kiểm tra và yêu cầu approve nếu allowance không đủ
       if (allowance < cost) {
-        message.info("Vui lòng xác nhận giao dịch Approve token trong ví MetaMask của bạn.");
+        messageApi.info("Vui lòng xác nhận giao dịch Approve token trong ví MetaMask của bạn.");
         const approveTx = await token.approve(CONTRACT_ADDRESS, cost);
         await approveTx.wait();
-        message.success("Đã approve token thành công!");
+        messageApi.success("Đã approve token thành công!");
       }
 
-      message.info("Đang tạo mặt hàng, vui lòng xác nhận giao dịch trong ví MetaMask của bạn.");
+      messageApi.info("Đang tạo mặt hàng, vui lòng xác nhận giao dịch trong ví MetaMask của bạn.");
       const tx = await contract.createItem(
         itemIdBytes32,
         values.name,
@@ -86,7 +87,7 @@ const CreateItem = () => {
       );
       await tx.wait();
 
-      message.success("Tạo mặt hàng thành công!"); // Thông báo thành công
+      messageApi.success("Tạo mặt hàng thành công!"); // Thông báo thành công
       // Chuyển hướng đến trang chi tiết mặt hàng vừa tạo
       navigate(`/item-detail?itemId=${values.itemId}`);
 
@@ -101,7 +102,7 @@ const CreateItem = () => {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      message.error(errorMessage); // Thông báo lỗi
+      messageApi.error(errorMessage); // Thông báo lỗi
     }
     setLoading(false);
   };

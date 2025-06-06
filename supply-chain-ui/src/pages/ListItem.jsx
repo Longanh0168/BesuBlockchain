@@ -12,6 +12,7 @@ import {
   Button,
   Space,
   Tag,
+  App as AntdApp
 } from 'antd';
 
 // Import hàm tiện ích để lấy tên vai trò từ địa chỉ
@@ -70,7 +71,7 @@ const ListItem = () => {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
   const navigate = useNavigate();
-
+  const { message: messageApi } = AntdApp.useApp();
   // Hàm khởi tạo kết nối ví và hợp đồng
   const initConnection = useCallback(async () => {
     if (window.ethereum) {
@@ -80,14 +81,14 @@ const ListItem = () => {
         // Sử dụng provider cho các hàm view
         const supplyChain = new ethers.Contract(CONTRACT_ADDRESS, contractArtifact.abi, provider);
         setContract(supplyChain);
-        message.success("Kết nối ví thành công!");
+        messageApi.success("Kết nối ví thành công!");
       } catch (err) {
-        message.error('Không thể kết nối ví: ' + err.message);
+        messageApi.error('Không thể kết nối ví: ' + err.message);
         console.error("Lỗi kết nối ví:", err);
         setLoading(false);
       }
     } else {
-      message.error('Vui lòng cài đặt MetaMask!');
+      messageApi.error('Vui lòng cài đặt MetaMask!');
       setLoading(false);
     }
   }, []);
@@ -95,7 +96,7 @@ const ListItem = () => {
   // Hàm tải tất cả các mặt hàng
   const fetchAllItems = useCallback(async () => {
     if (!contract) {
-      return message.error("Contract chưa sẵn sàng");
+      return messageApi.error("Contract chưa sẵn sàng");
     }
 
     setLoading(true);
@@ -120,10 +121,10 @@ const ListItem = () => {
         }
       }
       setItems(fetchedItems);
-      message.success(`Đã tải ${fetchedItems.length} mặt hàng.`);
+      messageApi.success(`Đã tải ${fetchedItems.length} mặt hàng.`);
     } catch (err) {
       console.error("Lỗi khi tải danh sách mặt hàng:", err);
-      message.error("Lỗi khi tải danh sách mặt hàng: " + err.message);
+      messageApi.error("Lỗi khi tải danh sách mặt hàng: " + err.message);
     }
     setLoading(false);
   }, [contract]); // Dependency là contract

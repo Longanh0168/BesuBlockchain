@@ -18,6 +18,7 @@ import {
   Form,
   Input,
   Table,
+  App as AntdApp
 } from 'antd';
 import moment from 'moment';
 
@@ -108,6 +109,7 @@ const ItemDetail = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const itemIdFromUrl = queryParams.get('itemId');
+  const { message: messageApi } = AntdApp.useApp();
 
   // Hàm khởi tạo kết nối ví và hợp đồng
   const initConnection = useCallback(async () => {
@@ -126,7 +128,7 @@ const ItemDetail = () => {
         setContract(supplyChain);
         setSigner(signerInstance);
         setTokenContract(sccToken); // Lưu instance của hợp đồng token
-        message.success("Kết nối ví thành công!");
+        messageApi.success("Kết nối ví thành công!");
 
         // Lấy địa chỉ hợp đồng token từ SupplyChainTracking contract (nếu cần, nhưng đã có TOKEN_ADDRESS)
         const tokenAddrFromContract = await supplyChain.tokenContract();
@@ -146,7 +148,7 @@ const ItemDetail = () => {
         setIsCustomer(await supplyChain.hasRole(CUSTOMER_ROLE_BYTES32, address));
 
       } catch (err) {
-        message.error('Không thể kết nối ví: ' + err.message);
+        messageApi.error('Không thể kết nối ví: ' + err.message);
         console.error("Lỗi kết nối ví:", err);
         setUserAddress(null); // Reset user address on error
         setIsProducer(false);
@@ -156,7 +158,7 @@ const ItemDetail = () => {
         setIsCustomer(false);
       }
     } else {
-      message.error('Vui lòng cài đặt MetaMask!');
+      messageApi.error('Vui lòng cài đặt MetaMask!');
       setUserAddress(null); // Reset user address if MetaMask not found
       setIsProducer(false);
       setIsTransporter(false);
@@ -244,15 +246,15 @@ const ItemDetail = () => {
           setPendingTransferDetails(null);
         }
 
-        message.success("Tải thông tin mặt hàng thành công!");
+        messageApi.success("Tải thông tin mặt hàng thành công!");
       } else {
         setItemDetails(null);
         setPendingTransferDetails(null);
-        message.error("Mặt hàng không tồn tại hoặc ID không đúng.");
+        messageApi.error("Mặt hàng không tồn tại hoặc ID không đúng.");
       }
     } catch (err) {
       console.error("Lỗi khi tải chi tiết mặt hàng:", err);
-      message.error("Lỗi khi tải chi tiết mặt hàng: " + err.message);
+      messageApi.error("Lỗi khi tải chi tiết mặt hàng: " + err.message);
       setItemDetails(null);
       setPendingTransferDetails(null);
     } finally {
@@ -281,7 +283,7 @@ const ItemDetail = () => {
           setSupplyChainTokenAddress(null);
           setItemDetails(null); // Clear item details as context is lost
           setPendingTransferDetails(null);
-          message.warning("Ví đã bị ngắt kết nối hoặc không có tài khoản nào được chọn.");
+          messageApi.warning("Ví đã bị ngắt kết nối hoặc không có tài khoản nào được chọn.");
           setLoading(false);
         } else {
           // Account changed, re-initialize connection and roles
@@ -325,7 +327,7 @@ const ItemDetail = () => {
 
   const handleSearchSubmit = (values) => {
     if (!contract) {
-      message.error("Contract chưa sẵn sàng. Vui lòng kiểm tra kết nối ví MetaMask.");
+      messageApi.error("Contract chưa sẵn sàng. Vui lòng kiểm tra kết nối ví MetaMask.");
       return;
     }
     fetchItemDetails(values.itemId);
@@ -333,7 +335,7 @@ const ItemDetail = () => {
 
   const handleUpdatePriceSubmit = async (newPriceValue) => {
     if (!contract || !signer || !itemDetails) {
-      message.error("Contract hoặc chi tiết mặt hàng chưa sẵn sàng.");
+      messageApi.error("Contract hoặc chi tiết mặt hàng chưa sẵn sàng.");
       return;
     }
 
@@ -342,11 +344,11 @@ const ItemDetail = () => {
       const newPrice = ethers.parseUnits(newPriceValue.toString(), 18);
       const itemIdBytes32 = ethers.keccak256(ethers.toUtf8Bytes(itemDetails.itemIdString));
 
-      message.info("Đang cập nhật giá bán, vui lòng xác nhận giao dịch trong ví MetaMask của bạn.");
+      messageApi.info("Đang cập nhật giá bán, vui lòng xác nhận giao dịch trong ví MetaMask của bạn.");
       const tx = await contract.updateSellingPrice(itemIdBytes32, newPrice);
       await tx.wait();
 
-      message.success("Cập nhật giá bán thành công!");
+      messageApi.success("Cập nhật giá bán thành công!");
       setIsUpdatePriceModalVisible(false);
       fetchItemDetails(itemDetails.itemIdString);
     } catch (err) {
@@ -359,7 +361,7 @@ const ItemDetail = () => {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      message.error(errorMessage);
+      messageApi.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -367,7 +369,7 @@ const ItemDetail = () => {
 
   const handleAddCertificateSubmit = async (certName, certIssuer) => {
     if (!contract || !signer || !itemDetails) {
-      message.error("Contract hoặc chi tiết mặt hàng chưa sẵn sàng.");
+      messageApi.error("Contract hoặc chi tiết mặt hàng chưa sẵn sàng.");
       return;
     }
 
@@ -375,11 +377,11 @@ const ItemDetail = () => {
     try {
       const itemIdBytes32 = ethers.keccak256(ethers.toUtf8Bytes(itemDetails.itemIdString));
 
-      message.info("Đang thêm chứng chỉ, vui lòng xác nhận giao dịch trong ví MetaMask của bạn.");
+      messageApi.info("Đang thêm chứng chỉ, vui lòng xác nhận giao dịch trong ví MetaMask của bạn.");
       const tx = await contract.addCertificate(itemIdBytes32, certName, certIssuer);
       await tx.wait();
 
-      message.success("Thêm chứng chỉ thành công!");
+      messageApi.success("Thêm chứng chỉ thành công!");
       setIsAddCertificateModalVisible(false);
       fetchItemDetails(itemDetails.itemIdString);
     } catch (err) {
@@ -392,7 +394,7 @@ const ItemDetail = () => {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      message.error(errorMessage);
+      messageApi.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -400,7 +402,7 @@ const ItemDetail = () => {
 
   const handleReportIssueSubmit = async (issueType, reason) => {
     if (!contract || !signer || !itemDetails) {
-      message.error("Contract hoặc chi tiết mặt hàng chưa sẵn sàng.");
+      messageApi.error("Contract hoặc chi tiết mặt hàng chưa sẵn sàng.");
       return;
     }
 
@@ -409,14 +411,14 @@ const ItemDetail = () => {
       const itemIdBytes32 = ethers.keccak256(ethers.toUtf8Bytes(itemDetails.itemIdString));
       let tx;
 
-      message.info(`Đang báo cáo sự cố ${issueType}, vui lòng xác nhận giao dịch trong ví MetaMask của bạn.`);
+      messageApi.info(`Đang báo cáo sự cố ${issueType}, vui lòng xác nhận giao dịch trong ví MetaMask của bạn.`);
 
       if (issueType === 'Damaged') {
         // Sử dụng reportDamage hoặc reportDamageAtDistributor tùy thuộc vào vai trò
         if (isTransporter || isDistributor) {
           tx = await contract.reportDamage(itemIdBytes32, reason);
         } else {
-          message.error("Bạn không có quyền báo cáo hư hỏng.");
+          messageApi.error("Bạn không có quyền báo cáo hư hỏng.");
           setLoading(false);
           return;
         }
@@ -425,19 +427,19 @@ const ItemDetail = () => {
         if (isTransporter || isDistributor) {
           tx = await contract.reportLost(itemIdBytes32, reason);
         } else {
-          message.error("Bạn không có quyền báo cáo thất lạc.");
+          messageApi.error("Bạn không có quyền báo cáo thất lạc.");
           setLoading(false);
           return;
         }
       } else {
-        message.error("Loại sự cố không hợp lệ.");
+        messageApi.error("Loại sự cố không hợp lệ.");
         setLoading(false);
         return;
       }
 
       await tx.wait();
 
-      message.success(`Báo cáo sự cố ${issueType} thành công!`);
+      messageApi.success(`Báo cáo sự cố ${issueType} thành công!`);
       setIsReportIssueModalVisible(false);
       fetchItemDetails(itemDetails.itemIdString);
     } catch (err) {
@@ -450,7 +452,7 @@ const ItemDetail = () => {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      message.error(errorMessage);
+      messageApi.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -458,7 +460,7 @@ const ItemDetail = () => {
 
   const handleInitiateTransferSubmit = async (recipientAddress) => {
     if (!contract || !signer || !itemDetails) {
-      message.error("Contract hoặc chi tiết mặt hàng chưa sẵn sàng.");
+      messageApi.error("Contract hoặc chi tiết mặt hàng chưa sẵn sàng.");
       return;
     }
 
@@ -466,11 +468,11 @@ const ItemDetail = () => {
     try {
       const itemIdBytes32 = ethers.keccak256(ethers.toUtf8Bytes(itemDetails.itemIdString));
 
-      message.info(`Đang khởi tạo chuyển giao đến ${getNameByAddress(recipientAddress)}, vui lòng xác nhận giao dịch.`);
+      messageApi.info(`Đang khởi tạo chuyển giao đến ${getNameByAddress(recipientAddress)}, vui lòng xác nhận giao dịch.`);
       const tx = await contract.initiateTransfer(itemIdBytes32, recipientAddress);
       await tx.wait();
 
-      message.success("Khởi tạo chuyển giao thành công!");
+      messageApi.success("Khởi tạo chuyển giao thành công!");
       setIsInitiateTransferModalVisible(false);
       fetchItemDetails(itemDetails.itemIdString);
     } catch (err) {
@@ -483,7 +485,7 @@ const ItemDetail = () => {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      message.error(errorMessage);
+      messageApi.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -491,18 +493,17 @@ const ItemDetail = () => {
 
   const handleApproveTokenSubmit = async (tokenContractInstance, amountToApprove) => {
     if (!tokenContractInstance || !signer || !itemDetails) {
-      message.error("Hợp đồng token hoặc chi tiết mặt hàng chưa sẵn sàng để phê duyệt.");
+      messageApi.error("Hợp đồng token hoặc chi tiết mặt hàng chưa sẵn sàng để phê duyệt.");
       return;
     }
 
     setLoading(true);
     try {
-      message.info(`Đang phê duyệt ${ethers.formatUnits(amountToApprove, 18)} SCC cho hợp đồng, vui lòng xác nhận giao dịch.`);
+      messageApi.info(`Đang phê duyệt ${ethers.formatUnits(amountToApprove, 18)} SCC cho hợp đồng, vui lòng xác nhận giao dịch.`);
       const tx = await tokenContractInstance.approve(CONTRACT_ADDRESS, amountToApprove);
       await tx.wait();
-      message.success("Phê duyệt token thành công!");
+      messageApi.success("Phê duyệt token thành công!");
     } catch (err) {
-      console.error("Lỗi khi phê duyệt token:", err);
       let errorMessage = "Lỗi khi phê duyệt token.";
       if (err.code === 'ACTION_REJECTED') {
         errorMessage = "Giao dịch đã bị từ chối bởi người dùng.";
@@ -511,7 +512,7 @@ const ItemDetail = () => {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      message.error(errorMessage);
+      messageApi.error(errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -520,7 +521,7 @@ const ItemDetail = () => {
 
   const handleConfirmTransferSubmit = async () => {
     if (!contract || !signer || !itemDetails || !pendingTransferDetails) {
-      message.error("Contract, chi tiết mặt hàng hoặc giao dịch đang chờ chưa sẵn sàng.");
+      messageApi.error("Contract, chi tiết mặt hàng hoặc giao dịch đang chờ chưa sẵn sàng.");
       return;
     }
 
@@ -528,24 +529,24 @@ const ItemDetail = () => {
     try {
       const itemIdBytes32 = ethers.keccak256(ethers.toUtf8Bytes(itemDetails.itemIdString));
 
-      message.info("Đang xác nhận chuyển giao, vui lòng xác nhận giao dịch và thanh toán trong ví MetaMask của bạn.");
+      messageApi.info("Đang xác nhận chuyển giao, vui lòng xác nhận giao dịch và thanh toán trong ví MetaMask của bạn.");
       const tx = await contract.confirmTransfer(itemIdBytes32);
       await tx.wait();
 
-      message.success("Xác nhận chuyển giao thành công!");
+      messageApi.success("Xác nhận chuyển giao thành công!");
       setIsConfirmTransferModalVisible(false);
       fetchItemDetails(itemDetails.itemIdString);
     } catch (err) {
       console.error("Lỗi khi xác nhận chuyển giao:", err);
       let errorMessage = "Lỗi khi xác nhận chuyển giao.";
-      if (err.code === 'ACTION_REJECTED') {
+      if (err.code === 4001 || err.code === 'ACTION_REJECTED') { // Kiểm tra lỗi từ chối giao dịch
         errorMessage = "Giao dịch đã bị từ chối bởi người dùng.";
       } else if (err.data && err.data.message) {
         errorMessage = err.data.message;
       } else if (err.message) {
         errorMessage = err.message;
       }
-      message.error(errorMessage);
+      messageApi.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -554,7 +555,7 @@ const ItemDetail = () => {
   // Hàm xử lý khi khách hàng mua sản phẩm
   const handleCustomerPurchaseSubmit = async () => {
     if (!contract || !signer || !itemDetails || !tokenContract) {
-      message.error("Contract, ví hoặc chi tiết mặt hàng chưa sẵn sàng.");
+      messageApi.error("Contract, ví hoặc chi tiết mặt hàng chưa sẵn sàng.");
       return;
     }
 
@@ -568,17 +569,17 @@ const ItemDetail = () => {
       const allowance = await tokenContract.allowance(userAddress, CONTRACT_ADDRESS);
 
       if (allowance < sellingPriceBigInt) {
-        message.info(`Vui lòng xác nhận giao dịch Approve ${itemDetails.sellingPrice} SCC cho hợp đồng trong ví MetaMask của bạn.`);
+        messageApi.info(`Vui lòng xác nhận giao dịch Approve ${itemDetails.sellingPrice} SCC cho hợp đồng trong ví MetaMask của bạn.`);
         const approveTx = await tokenContract.approve(CONTRACT_ADDRESS, sellingPriceBigInt);
         await approveTx.wait();
-        message.success("Đã phê duyệt token thành công!");
+        messageApi.success("Đã phê duyệt token thành công!");
       }
 
-      message.info("Đang thực hiện giao dịch mua, vui lòng xác nhận trong ví MetaMask của bạn.");
+      messageApi.info("Đang thực hiện giao dịch mua, vui lòng xác nhận trong ví MetaMask của bạn.");
       const tx = await contract.customerBuyItem(itemIdBytes32); // Gọi hàm customerBuyItem
       await tx.wait();
 
-      message.success("Mua sản phẩm thành công!");
+      messageApi.success("Mua sản phẩm thành công!");
       setIsCustomerPurchaseModalVisible(false);
       fetchItemDetails(itemDetails.itemIdString);
     } catch (err) {
@@ -591,7 +592,7 @@ const ItemDetail = () => {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      message.error(errorMessage);
+      messageApi.error(errorMessage);
     } finally {
       setLoading(false);
     }

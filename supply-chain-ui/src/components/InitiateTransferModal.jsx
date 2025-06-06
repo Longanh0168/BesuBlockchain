@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Select, Button, message } from 'antd';
+import { Modal, Form, Select, Button, message, App as AntdApp } from 'antd';
 import { ethers } from 'ethers';
 import { getNameByAddress, getAddressByName } from '../utils/roles'; // Đảm bảo có hàm getAddressByName
 
@@ -14,7 +14,8 @@ const InitiateTransferModal = ({
 }) => {
   const [form] = Form.useForm();
   const [recipientRoles, setRecipientRoles] = useState([]);
-
+  const { message: messageApi } = AntdApp.useApp();
+  
   // Cập nhật danh sách vai trò người nhận dựa trên vai trò của chủ sở hữu hiện tại
   useEffect(() => {
     let allowedRoles = [];
@@ -32,7 +33,7 @@ const InitiateTransferModal = ({
   const handleFormSubmit = async (values) => {
     const recipientAddress = getAddressByName(values.recipient);
     if (!recipientAddress || recipientAddress === ethers.ZeroAddress) {
-      message.error("Địa chỉ người nhận không hợp lệ.");
+      messageApi.error("Địa chỉ người nhận không hợp lệ.");
       return;
     }
     await onSubmit(recipientAddress);

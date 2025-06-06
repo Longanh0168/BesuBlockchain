@@ -13,6 +13,7 @@ import {
   Space,
   Card,
   Statistic,
+  App as AntdApp
 } from 'antd';
 
 import MintTokenModal from '../components/MintTokenModal';
@@ -35,6 +36,7 @@ const TokenManagement = () => {
   const [isMintModalVisible, setIsMintModalVisible] = useState(false);
   const [isBurnModalVisible, setIsBurnModalVisible] = useState(false);
   const [selectedAccountForTokenAction, setSelectedAccountForTokenAction] = useState(null); // Tài khoản được chọn để mint/burn
+  const { message: messageApi } = AntdApp.useApp();
 
   // Hàm khởi tạo kết nối ví và hợp đồng token
   const initConnection = useCallback(async () => {
@@ -56,22 +58,22 @@ const TokenManagement = () => {
         setIsTokenOwner(isOwner);
 
         if (!isOwner) {
-          message.error("Bạn không có quyền truy cập trang này. Chỉ chủ sở hữu token mới có thể quản lý.");
+          messageApi.error("Bạn không có quyền truy cập trang này. Chỉ chủ sở hữu token mới có thể quản lý.");
           navigate('/'); // Chuyển hướng về trang chủ nếu không phải chủ sở hữu
           setLoading(false);
           return;
         }
 
-        message.success("Kết nối ví và kiểm tra quyền sở hữu token thành công!");
+        messageApi.success("Kết nối ví và kiểm tra quyền sở hữu token thành công!");
         await fetchAccountBalances(sccToken); // Fetch dữ liệu số dư tài khoản
       } catch (err) {
-        message.error('Không thể kết nối ví hoặc kiểm tra quyền sở hữu token: ' + err.message);
+        messageApi.error('Không thể kết nối ví hoặc kiểm tra quyền sở hữu token: ' + err.message);
         console.error("Lỗi kết nối ví hoặc kiểm tra quyền sở hữu token:", err);
         setLoading(false);
         navigate('/'); // Chuyển hướng về trang chủ nếu có lỗi
       }
     } else {
-      message.error('Vui lòng cài đặt MetaMask!');
+      messageApi.error('Vui lòng cài đặt MetaMask!');
       setLoading(false);
       navigate('/'); // Chuyển hướng về trang chủ nếu không có MetaMask
     }
@@ -99,7 +101,7 @@ const TokenManagement = () => {
       setAccountsBalances(fetchedBalances);
     } catch (error) {
       console.error("Lỗi khi tải số dư tài khoản:", error);
-      message.error("Lỗi khi tải số dư tài khoản: " + error.message);
+      messageApi.error("Lỗi khi tải số dư tài khoản: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -119,7 +121,7 @@ const TokenManagement = () => {
           setTokenContract(null);
           setSigner(null);
           setAccountsBalances([]);
-          message.warning("Ví đã bị ngắt kết nối hoặc không có tài khoản nào được chọn.");
+          messageApi.warning("Ví đã bị ngắt kết nối hoặc không có tài khoản nào được chọn.");
           setLoading(false);
           navigate('/'); // Chuyển hướng về trang chủ
         } else {
@@ -141,16 +143,16 @@ const TokenManagement = () => {
   // Hàm xử lý Mint Token
   const handleMintSubmit = async (accountAddress, amount) => {
     if (!tokenContract || !signer) {
-      message.error("Hợp đồng token hoặc ví chưa sẵn sàng.");
+      messageApi.error("Hợp đồng token hoặc ví chưa sẵn sàng.");
       return;
     }
     setLoading(true);
     try {
       const parsedAmount = ethers.parseUnits(amount.toString(), 18); // Chuyển đổi số lượng sang BigInt
-      message.info(`Đang mint ${amount} SCC cho ${accountAddress}, vui lòng xác nhận giao dịch.`);
+      messageApi.info(`Đang mint ${amount} SCC cho ${accountAddress}, vui lòng xác nhận giao dịch.`);
       const tx = await tokenContract.connect(signer).mint(accountAddress, parsedAmount);
       await tx.wait();
-      message.success(`Đã mint ${amount} SCC thành công cho ${accountAddress}!`);
+      messageApi.success(`Đã mint ${amount} SCC thành công cho ${accountAddress}!`);
       setIsMintModalVisible(false);
       await fetchAccountBalances(tokenContract); // Tải lại số dư sau khi mint
     } catch (err) {
@@ -163,7 +165,7 @@ const TokenManagement = () => {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      message.error(errorMessage);
+      messageApi.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -172,18 +174,18 @@ const TokenManagement = () => {
   // Hàm xử lý Burn Token (ownerBurn)
   const handleBurnSubmit = async (accountAddress, amount) => {
     if (!tokenContract || !signer) {
-      message.error("Hợp đồng token hoặc ví chưa sẵn sàng.");
+      messageApi.error("Hợp đồng token hoặc ví chưa sẵn sàng.");
       return;
     }
     setLoading(true);
     try {
       const parsedAmount = ethers.parseUnits(amount.toString(), 18); // Chuyển đổi số lượng sang BigInt
-      message.info(`Đang hủy ${amount} SCC từ ${accountAddress}, vui lòng xác nhận giao dịch.`);
+      messageApi.info(`Đang hủy ${amount} SCC từ ${accountAddress}, vui lòng xác nhận giao dịch.`);
 
       // Gọi hàm ownerBurn mới (không cần kiểm tra allowance)
       const tx = await tokenContract.connect(signer).ownerBurn(accountAddress, parsedAmount);
       await tx.wait();
-      message.success(`Đã hủy ${amount} SCC thành công từ ${accountAddress}!`);
+      messageApi.success(`Đã hủy ${amount} SCC thành công từ ${accountAddress}!`);
       setIsBurnModalVisible(false);
       await fetchAccountBalances(tokenContract); // Tải lại số dư sau khi burn
     } catch (err) {
@@ -196,7 +198,7 @@ const TokenManagement = () => {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      message.error(errorMessage);
+      messageApi.error(errorMessage);
     } finally {
       setLoading(false);
     }
