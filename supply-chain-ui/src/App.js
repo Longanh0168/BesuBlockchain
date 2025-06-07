@@ -9,6 +9,7 @@ import ItemDetail from './pages/ItemDetail';
 import ListItem from './pages/ListItem';
 import AccessControl from './pages/AccessControl';
 import TokenManagement from './pages/TokenManagement';
+import SupplyChainImage from './assets/supply-chain-illustration.jpg';
 
 const { Header, Content, Footer } = Layout;
 const { Title } = Typography;
@@ -22,7 +23,7 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loadingRoles, setLoadingRoles] = useState(true);
   const { message: messageApi } = AntdApp.useApp();
-  
+
   // Function to determine the selected menu key based on the current pathname
   const getSelectedKey = () => {
     const { pathname } = location;
@@ -69,7 +70,7 @@ function App() {
         const hasAdminRole = await supplyChain.hasRole(DEFAULT_ADMIN_ROLE_BYTES32, address);
         setIsAdmin(hasAdminRole);
 
-        message.success("Kết nối ví và kiểm tra vai trò thành công!");
+        messageApi.success("Kết nối ví và kiểm tra vai trò thành công!");
       } catch (err) {
         messageApi.error('Không thể kết nối ví hoặc kiểm tra vai trò: ' + err.message);
         console.error("Lỗi kết nối ví hoặc kiểm tra vai trò:", err);
@@ -78,7 +79,7 @@ function App() {
       messageApi.error('Vui lòng cài đặt MetaMask!');
     }
     setLoadingRoles(false); // End loading roles
-  }, []);
+  }, [messageApi]);
 
   useEffect(() => {
     initWeb3AndRoles();
@@ -93,7 +94,7 @@ function App() {
           setIsAdmin(false);
           setContract(null);
           setSigner(null);
-          message.warning("Ví đã bị ngắt kết nối hoặc không có tài khoản nào được chọn.");
+          messageApi.warning("Ví đã bị ngắt kết nối hoặc không có tài khoản nào được chọn.");
           setLoadingRoles(false); // Stop loading if disconnected
         } else {
           // Re-initialize to get new address and roles
@@ -110,7 +111,7 @@ function App() {
         }
       };
     }
-  }, [initWeb3AndRoles]); // Dependency array includes initWeb3AndRoles to ensure it's up-to-date
+  }, [initWeb3AndRoles, messageApi]); // Added messageApi to dependency array
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -188,8 +189,32 @@ function App() {
             <Route path="/token-management" element={<TokenManagement />} />
             <Route path="/" element={
               <div style={{ textAlign: 'center', padding: '50px 0' }}>
-                <Title level={2}>Chào mừng đến với Hệ thống theo dõi chuỗi cung ứng</Title>
-                <p>Sử dụng thanh điều hướng phía trên để tạo hoặc xem thông tin mặt hàng.</p>
+                <Title level={2} style={{ marginBottom: '20px' }}>
+                  Chào mừng đến với Hệ thống theo dõi chuỗi cung ứng
+                </Title>
+                <img
+                  src={SupplyChainImage}
+                  alt="Supply Chain Illustration"
+                  style={{ maxWidth: '80%', height: 'auto', marginBottom: '30px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)' }}
+                />
+                <Typography.Paragraph style={{ fontSize: '16px', color: '#555', marginBottom: '20px' }}>
+                  Hệ thống này được xây dựng trên công nghệ Blockchain, mang lại sự minh bạch, an toàn và khả năng truy xuất nguồn gốc cho toàn bộ quy trình chuỗi cung ứng.
+                </Typography.Paragraph>
+                <Typography.Paragraph style={{ fontSize: '16px', color: '#555', marginBottom: '20px' }}>
+                  Với vai trò của bạn trong hệ thống, bạn có thể thực hiện các chức năng sau:
+                </Typography.Paragraph>
+                <Typography.Paragraph style={{ fontSize: '16px', color: '#555', marginBottom: '30px' }}>
+                  <ul style={{ listStyleType: 'disc', paddingLeft: '20px', textAlign: 'left', display: 'inline-block' }}>
+                    <li>Xem danh sách các mặt hàng đã được ghi nhận trên hệ thống.</li>
+                    <li>Tạo mặt hàng mới (chỉ dành cho nhà sản xuất).</li>
+                    <li>Xem chi tiết lịch sử và trạng thái của từng mặt hàng.</li>
+                    {isAdmin && <li>Quản lý quyền truy cập của các bên tham gia.</li>}
+                    {isAdmin && <li>Quản lý token SCC (Supply Chain Coin).</li>}
+                  </ul>
+                </Typography.Paragraph>
+                <Typography.Paragraph style={{ fontSize: '14px', color: '#888' }}>
+                  Hãy khám phá và trải nghiệm sự khác biệt mà Blockchain mang lại cho quản lý chuỗi cung ứng!
+                </Typography.Paragraph>
                 {/* You can add other introductory or instructional information here */}
               </div>
             } />
